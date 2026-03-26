@@ -6,7 +6,7 @@ export const products: Product[] = [
     name: "Camisaco Oversize Marron",
     price: 12000,
     image: "/camisacos.png",
-    images: ["/camisacos.png"],
+    images: ["/camisacos.png", "/camisaco2.png"],
     category: "Camisacos",
     description: "Camisaco oversize de tela liviana, ideal para el día a día.",
     longDescription: "Un camisaco oversize de corte relajado, confeccionado en tela liviana de alta calidad. Diseñado para combinar comodidad y estilo urbano en cualquier ocasión. Su patrón cuadrillé en tonos marrones lo hace versátil y fácil de combinar.",
