@@ -50,7 +50,7 @@ export const products: Product[] = [
     price: 16000,
     image: "/camisaco2.png",
     images: ["/camisaco2.png", "/camisaco2.png"],
-    category: "Camisacos", // O la categoría que prefieras
+    category: "Remeras", // O la categoría que prefieras
     description: "Descripción corta para la card.",
     longDescription: "Descripción detallada para la página del producto.",
     benefits: [
