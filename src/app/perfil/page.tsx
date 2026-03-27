@@ -15,6 +15,14 @@ interface Address {
   phone: string;
 }
 
+interface OrderItem {
+  name: string;
+  size: string;
+  quantity: number;
+  price: number;
+  image?: string;
+}
+
 interface Order {
   _id: string;
   external_reference: string;
@@ -22,6 +30,7 @@ interface Order {
   amount: number;
   status: string;
   createdAt: string;
+  items?: OrderItem[];
 }
 
 export default function PerfilPage() {
@@ -30,6 +39,7 @@ export default function PerfilPage() {
   const [activeTab, setActiveTab] = useState<Tab>("pedidos");
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
+  const [carouselIndexes, setCarouselIndexes] = useState<Record<string, number>>({});
   const [address, setAddress] = useState<Address>({ street: "", city: "", province: "", postalCode: "", phone: "" });
   const [name, setName] = useState("");
   const [editingAddress, setEditingAddress] = useState(false);
@@ -148,33 +158,109 @@ export default function PerfilPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {orders.map(order => (
-                <div key={order._id} className="bg-white border border-[#E0DED8] rounded-sm overflow-hidden">
-                  {/* Status bar */}
-                  <div className={`h-1 w-full ${order.status === "approved" ? "bg-green-500" : "bg-yellow-400"}`} />
-                  <div className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <p className="font-dm text-[10px] text-[#888] uppercase tracking-wider">
-                          {new Date(order.createdAt).toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" })}
-                        </p>
-                        <p className="font-dm font-semibold text-sm text-[#111] mt-0.5 leading-tight">{order.title}</p>
+              {orders.map(order => {
+                const items = order.items ?? [];
+                const imagesWithItems = items.filter(i => i.image);
+                const currentIdx = carouselIndexes[order._id] ?? 0;
+                const hasPrev = currentIdx > 0;
+                const hasNext = currentIdx < imagesWithItems.length - 1;
+
+                const goTo = (dir: 1 | -1) => {
+                  setCarouselIndexes(prev => ({
+                    ...prev,
+                    [order._id]: (prev[order._id] ?? 0) + dir,
+                  }));
+                };
+
+                return (
+                  <div key={order._id} className="bg-white border border-[#E0DED8] rounded-sm overflow-hidden">
+                    {/* Barra de color por estado */}
+                    <div className={`h-1 w-full ${order.status === "approved" ? "bg-green-500" : "bg-yellow-400"}`} />
+
+                    {/* Carrusel de imágenes */}
+                    {imagesWithItems.length > 0 && (
+                      <div className="relative bg-[#F5F4F0] overflow-hidden" style={{ height: 180 }}>
+                        <div
+                          className="flex transition-transform duration-300 ease-in-out h-full"
+                          style={{ transform: `translateX(-${currentIdx * 100}%)` }}
+                        >
+                          {imagesWithItems.map((item, i) => (
+                            <div key={i} className="flex-shrink-0 w-full h-full flex items-center justify-center relative">
+                              <Image
+                                src={item.image!}
+                                alt={item.name}
+                                fill
+                                className="object-contain p-4"
+                              />
+                              {/* Etiqueta del item */}
+                              <div className="absolute bottom-2 left-0 right-0 flex justify-center">
+                                <span className="bg-black/60 text-white font-dm text-[10px] px-2 py-0.5 rounded-full">
+                                  {item.name} — Talle {item.size}
+                                  {item.quantity > 1 ? ` ×${item.quantity}` : ""}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Botones de navegación */}
+                        {hasPrev && (
+                          <button
+                            onClick={() => goTo(-1)}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-white/80 rounded-full flex items-center justify-center shadow-sm hover:bg-white transition-colors"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+                          </button>
+                        )}
+                        {hasNext && (
+                          <button
+                            onClick={() => goTo(1)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-white/80 rounded-full flex items-center justify-center shadow-sm hover:bg-white transition-colors"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
+                          </button>
+                        )}
+
+                        {/* Dots indicadores */}
+                        {imagesWithItems.length > 1 && (
+                          <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-1">
+                            {imagesWithItems.map((_, i) => (
+                              <button
+                                key={i}
+                                onClick={() => setCarouselIndexes(prev => ({ ...prev, [order._id]: i }))}
+                                className={`w-1.5 h-1.5 rounded-full transition-colors ${i === currentIdx ? "bg-white" : "bg-white/40"}`}
+                              />
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <span className={`flex-shrink-0 ml-2 font-dm text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
-                        order.status === "approved" ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"
-                      }`}>
-                        {order.status === "approved" ? "Pagado" : "Pendiente"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#F0EDE6]">
-                      <p className="font-dm text-[10px] text-[#AAA]">#{order.external_reference}</p>
-                      <p className="font-dm font-bold text-base text-[#111]">
-                        ${order.amount.toLocaleString("es-AR")}
-                      </p>
+                    )}
+
+                    {/* Info del pedido */}
+                    <div className="p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <p className="font-dm text-[10px] text-[#888] uppercase tracking-wider">
+                            {new Date(order.createdAt).toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" })}
+                          </p>
+                          <p className="font-dm font-semibold text-sm text-[#111] mt-0.5 leading-tight">{order.title}</p>
+                        </div>
+                        <span className={`flex-shrink-0 ml-2 font-dm text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
+                          order.status === "approved" ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"
+                        }`}>
+                          {order.status === "approved" ? "Pagado" : "Pendiente"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#F0EDE6]">
+                        <p className="font-dm text-[10px] text-[#AAA]">#{order.external_reference}</p>
+                        <p className="font-dm font-bold text-base text-[#111]">
+                          ${order.amount.toLocaleString("es-AR")}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -56,7 +56,15 @@ export async function POST(req: Request) {
       title: validatedItems.map(i => `${i.product.name} (${i.size})`).join(", "),
       amount: totalAmount,
       status: "pending",
-      userId: session?.user?.id ?? null, // ← vinculamos al usuario si está logueado
+      userId: session?.user?.id ?? null,
+      // Guardamos los items con imagen para mostrarlos en el perfil
+      items: validatedItems.map(i => ({
+        name: i.product.name,
+        size: i.size,
+        quantity: i.quantity,
+        price: i.product.price,
+        image: i.product.image ?? null,
+      })),
     });
 
     const preference = new Preference(client);
