@@ -47,7 +47,7 @@ export const products: Product[] = [
   {
     id: 3, // ¡Importante! El ID debe ser único
     name: "Camisaco Oversize Marron",
-    price: 15000,
+    price: 16000,
     image: "/camisaco2.png",
     images: ["/camisaco2.png", "/camisaco2.png"],
     category: "Camisacos", // O la categoría que prefieras
@@ -67,7 +67,7 @@ export const products: Product[] = [
    {
     id: 4,
     name: "Camisaco Oversize Marron",
-    price: 12000,
+    price: 13000,
     image: "/camisacos.png",
     images: ["/camisacos.png", "/camisaco2.png"],
     category: "Camisacos",

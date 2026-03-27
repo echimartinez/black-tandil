@@ -8,3 +8,6 @@
 [remote "origin"]
 	url = https://github.com/echimartinez/Black-Tandil.git
 	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "ordenar-y-filtrar"]
+	remote = origin
+	merge = refs/heads/ordenar-y-filtrar
