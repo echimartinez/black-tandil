@@ -17,9 +17,52 @@ const dmSans = DM_Sans({
   subsets: ["latin"],
 });
 
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://blacktandil.com";
+
 export const metadata: Metadata = {
-  title: "Black Tandil",
-  description: "Ropa urbana de calidad. Envíos a todo el país.",
+  metadataBase: new URL(BASE_URL),
+  title: {
+    default: "Black Tandil — Ropa urbana",
+    template: "%s | Black Tandil",
+  },
+  description: "Tienda de ropa urbana en Tandil. Camisacos, remeras y más. Envíos a todo el país.",
+  keywords: ["ropa urbana", "tandil", "camisacos", "streetwear", "indumentaria", "Buenos Aires"],
+  authors: [{ name: "Black Tandil" }],
+  creator: "Black Tandil",
+  openGraph: {
+    type: "website",
+    locale: "es_AR",
+    url: BASE_URL,
+    siteName: "Black Tandil",
+    title: "Black Tandil — Ropa urbana",
+    description: "Tienda de ropa urbana en Tandil. Camisacos, remeras y más. Envíos a todo el país.",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Black Tandil — Ropa urbana",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Black Tandil — Ropa urbana",
+    description: "Tienda de ropa urbana en Tandil. Envíos a todo el país.",
+    images: ["/og-image.jpg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+    },
+  },
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({

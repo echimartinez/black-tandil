@@ -19,70 +19,45 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
-
         await dbConnect();
         const user = await User.findOne({ email: credentials.email });
-
         if (!user || !user.password) return null;
-
-        const isValid = await bcrypt.compare(
-          credentials.password as string,
-          user.password
-        );
-
+        const isValid = await bcrypt.compare(credentials.password as string, user.password);
         if (!isValid) return null;
-
-        return {
-          id: user._id.toString(),
-          name: user.name,
-          email: user.email,
-          image: user.image,
-        };
+        return { id: user._id.toString(), name: user.name, email: user.email, image: user.image };
       },
     }),
   ],
 
   callbacks: {
     async signIn({ user, account }) {
-      // Si es Google, crear usuario si no existe
       if (account?.provider === 'google') {
         await dbConnect();
         const existing = await User.findOne({ email: user.email });
         if (!existing) {
-          await User.create({
-            name: user.name,
-            email: user.email,
-            image: user.image,
-            provider: 'google',
-          });
+          await User.create({ name: user.name, email: user.email, image: user.image, provider: 'google' });
         }
       }
       return true;
     },
-
     async jwt({ token, user }) {
       if (user) {
         await dbConnect();
         const dbUser = await User.findOne({ email: user.email });
         if (dbUser) {
           token.id = dbUser._id.toString();
+          token.role = dbUser.role; // ← pasamos el rol al token
         }
       }
       return token;
     },
-
     async session({ session, token }) {
-      if (token?.id) {
-        session.user.id = token.id as string;
-      }
+      if (token?.id) session.user.id = token.id as string;
+      if (token?.role) session.user.role = token.role as string; // ← disponible en session
       return session;
     },
   },
 
-  pages: {
-    signIn: '/login',
-    error: '/login',
-  },
-
+  pages: { signIn: '/login', error: '/login' },
   session: { strategy: 'jwt' },
 });

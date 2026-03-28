@@ -3,9 +3,10 @@ import mongoose from 'mongoose';
 const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
-  password: { type: String }, // null si se registró con Google
+  password: { type: String },
   image: { type: String },
-  provider: { type: String, default: 'credentials' }, // 'credentials' | 'google'
+  provider: { type: String, default: 'credentials' },
+  role: { type: String, enum: ['user', 'admin'], default: 'user' }, // ← nuevo
   address: {
     street: String,
     city: String,

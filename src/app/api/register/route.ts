@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/mongodb';
 import User from '@/model/User';
+import { sendWelcomeEmail } from '@/lib/email';
 
 export async function POST(req: Request) {
   try {
@@ -28,6 +29,10 @@ export async function POST(req: Request) {
       password: hashedPassword,
       provider: 'credentials',
     });
+
+    // Enviar email de bienvenida (no bloqueamos si falla)
+    sendWelcomeEmail({ to: email.toLowerCase().trim(), name: name.trim() })
+      .catch(err => console.error('❌ Error enviando bienvenida:', err.message));
 
     return new Response(JSON.stringify({ ok: true }), { status: 201 });
   } catch (error: any) {

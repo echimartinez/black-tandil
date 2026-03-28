@@ -3,13 +3,12 @@ import crypto from 'crypto';
 import client from "../../../lib/mercadopago";
 import dbConnect from "../../../lib/mongodb";
 import Order from "../../../model/Order";
+import User from "../../../model/User";
+import { sendOrderConfirmation, sendNewOrderAdmin } from "@/lib/email";
 
 const isDev = process.env.NODE_ENV === 'development';
 
 function verifyMPSignature(req: Request): boolean {
-  // En desarrollo saltamos la verificación de firma — el webhook no puede
-  // firmar correctamente cuando llega a través de ngrok u otros túneles.
-  // En producción la verificación se aplica siempre.
   if (isDev) {
     console.log('🔓 Dev mode — verificación de firma omitida');
     return true;
@@ -93,6 +92,38 @@ export async function POST(req: Request) {
 
         if (updatedOrder) {
           console.log(`✅ Orden ${externalReference} marcada como PAGADA.`);
+
+          // Buscar datos del usuario si tiene userId
+          let userEmail: string | undefined;
+          let userName: string | undefined;
+
+          if (updatedOrder.userId) {
+            const user = await User.findById(updatedOrder.userId).select('name email');
+            if (user) {
+              userEmail = user.email;
+              userName = user.name;
+            }
+          }
+
+          const orderData = {
+            title: updatedOrder.title,
+            amount: updatedOrder.amount,
+            external_reference: updatedOrder.external_reference,
+            userName,
+            userEmail,
+          };
+
+          // Enviar emails en paralelo (no bloqueamos la respuesta si fallan)
+          await Promise.allSettled([
+            // Email al comprador (solo si tenemos su email)
+            userEmail
+              ? sendOrderConfirmation({ to: userEmail, order: orderData })
+              : Promise.resolve(),
+
+            // Email al admin siempre
+            sendNewOrderAdmin({ order: orderData }),
+          ]);
+
         } else {
           console.warn(`⚠️ No se encontró la orden ${externalReference}.`);
         }

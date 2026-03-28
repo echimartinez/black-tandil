@@ -2,19 +2,17 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { getProductById } from "@/data/products";
 import { useCart } from "@/context/CartContext";
 import { Product } from "@/types";
 import StickyCartButton from "@/components/StickyCartButton";
 
-export default function ProductPage() {
-  const params = useParams();
+export default function ProductPageClient({ id }: { id: string }) {
   const router = useRouter();
   const { addItem, openCart } = useCart();
 
   const [product, setProduct] = useState<Product | null>(null);
-  const [notFound, setNotFound] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [sizeError, setSizeError] = useState(false);
@@ -22,43 +20,10 @@ export default function ProductPage() {
   const [openSection, setOpenSection] = useState<string | null>(null);
 
   useEffect(() => {
-    // Esperamos a que params.id esté disponible
-    const rawId = Array.isArray(params?.id) ? params.id[0] : params?.id;
-    if (!rawId) return; // todavía no llegó el id, esperamos
-
-    const numId = Number(rawId);
-    if (isNaN(numId)) {
-      setNotFound(true);
-      return;
-    }
-
-    const p = getProductById(numId);
-    if (!p) {
-      setNotFound(true);
-    } else {
-      setProduct(p);
-    }
-  }, [params]);
-
-  // Solo redirigimos al home si confirmamos que no existe
-  useEffect(() => {
-    if (notFound) router.push("/");
-  }, [notFound, router]);
-
-  // Mientras carga mostramos un skeleton
-  if (!product && !notFound) {
-    return (
-      <div className="w-full pb-28 animate-pulse">
-        <div className="w-full aspect-square bg-[#ECEAE4]" />
-        <div className="px-4 pt-5 space-y-3">
-          <div className="h-3 bg-[#E0DED8] rounded w-20" />
-          <div className="h-8 bg-[#E0DED8] rounded w-3/4" />
-          <div className="h-4 bg-[#E0DED8] rounded w-1/2" />
-          <div className="h-7 bg-[#E0DED8] rounded w-1/3 mt-4" />
-        </div>
-      </div>
-    );
-  }
+    const p = getProductById(Number(id));
+    if (!p) router.push("/");
+    else setProduct(p);
+  }, [id, router]);
 
   if (!product) return null;
 
