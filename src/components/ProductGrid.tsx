@@ -126,7 +126,7 @@ export default function ProductGrid({ productList }: ProductGridProps) {
     <div className="w-full">
 
       {/* ── Barra Ordenar / Filtrar ── */}
-      <div className="sticky top-[88px] z-20 bg-white border-b border-[#E0DED8] px-4 py-2.5 flex items-center gap-2">
+      <div className="sticky top-[69px] z-20 bg-white border-b border-[#E0DED8] px-4 py-2.5 flex items-center gap-2">
 
         {/* Ordenar */}
         <div className="relative flex-1" ref={sortRef}>
