@@ -28,7 +28,7 @@ export default function NavDrawer({ isOpen, onClose }: NavDrawerProps) {
     <>
       {/* Overlay */}
       <div
-        className={`fixed inset-0 bg-black/40 z-40 transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black/60 z-40 transition-opacity duration-300 ${
           isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
         onClick={onClose}
@@ -36,16 +36,16 @@ export default function NavDrawer({ isOpen, onClose }: NavDrawerProps) {
 
       {/* Drawer */}
       <div
-        className={`fixed top-0 left-0 h-full w-full max-w-xs bg-white z-50 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 h-full w-full max-w-[260px] bg-[#111] z-50 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Header del menú */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E0DED8]">
-          <span className="font-bebas text-2xl tracking-tight">MENÚ</span>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+          <span className="font-bebas text-2xl tracking-tight text-white">MENÚ</span>
           <button
             onClick={onClose}
-            className="text-[#888] hover:text-[#111] transition-colors p-1"
+            className="text-white/50 hover:text-white transition-colors p-1"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18"/>
@@ -55,7 +55,7 @@ export default function NavDrawer({ isOpen, onClose }: NavDrawerProps) {
         </div>
 
         {/* Categorías */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto bg-white">
           {categories.map((category) => (
             <div key={category.slug} className="border-b border-[#F0EDE6]">
               {/* Categoría principal */}
@@ -107,11 +107,11 @@ export default function NavDrawer({ isOpen, onClose }: NavDrawerProps) {
         </div>
 
         {/* Footer del menú */}
-        <div className="border-t border-[#E0DED8] px-5 py-5 space-y-3">
+        <div className="border-t border-white/10 px-5 py-5 space-y-3">
           <Link
             href="/perfil"
             onClick={onClose}
-            className="flex items-center gap-3 font-dm text-sm text-[#444] hover:text-[#111] transition-colors"
+            className="flex items-center gap-3 font-dm text-sm text-white/60 hover:text-white transition-colors"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
@@ -122,7 +122,7 @@ export default function NavDrawer({ isOpen, onClose }: NavDrawerProps) {
           <Link
             href="/"
             onClick={onClose}
-            className="flex items-center gap-3 font-dm text-sm text-[#444] hover:text-[#111] transition-colors"
+            className="flex items-center gap-3 font-dm text-sm text-white/60 hover:text-white transition-colors"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
