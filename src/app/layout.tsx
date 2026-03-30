@@ -73,6 +73,7 @@ export default function RootLayout({
     <html lang="es" className={`${bebas.variable} ${dmSans.variable}`}>
       <body className="min-h-screen flex flex-col bg-[#F5F4F0] text-[#111] overflow-x-hidden">
         <AuthProvider>
+          <SplashScreen /> 
           <CartProvider>
             <div className="bg-[#111] text-white text-center text-xs tracking-widest py-2 font-dm uppercase px-4 truncate">
               ¡Envíos a todo el país!
