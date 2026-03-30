@@ -5,6 +5,7 @@ import { CartProvider } from "@/context/CartContext";
 import CartDrawer from "@/components/CartDrawer";
 import Header from "@/components/Header";
 import AuthProvider from "@/components/AuthProvider";
+import SplashScreen from "@/components/SplashScreen";
 
 const bebas = Bebas_Neue({
   weight: "400",
@@ -82,8 +83,13 @@ export default function RootLayout({
             </main>
             <footer className="bg-[#111] text-white mt-12">
               <div className="w-full px-4 py-8">
-                <p className="font-bebas text-3xl mb-1">BLACK TANDIL</p>
-                <p className="font-dm text-xs text-[#888] tracking-wide">Ropa urbana · Tandil, Buenos Aires</p>
+                <p className="font-bebas text-3xl mb-1">SOMOSBLACK.AR</p>
+                <p className="font-dm text-xs text-[#888] tracking-wide">
+                  Ropa urbana · Tandil ·{" "}
+                  <a href="https://instagram.com/somosblack.ar" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+                    @somosblack.ar
+                  </a>
+                </p>
                 <div className="border-t border-[#333] mt-6 pt-4 text-xs text-[#555] font-dm">
                   © {new Date().getFullYear()} Black Tandil. Todos los derechos reservados.
                 </div>
