@@ -14,13 +14,13 @@ export default function SplashScreen() {
     }
 
     // Después de 3s empieza el fade out
-    const fadeTimer = setTimeout(() => setPhase("fading"), 3000);
+    const fadeTimer = setTimeout(() => setPhase("fading"), 1000);
 
     // Después de 3.8s desaparece completamente
     const goneTimer = setTimeout(() => {
       setPhase("gone");
       sessionStorage.setItem("splash_seen", "1");
-    }, 3800);
+    }, 1800);
 
     return () => {
       clearTimeout(fadeTimer);
@@ -73,7 +73,7 @@ export default function SplashScreen() {
           animation: "splashIn 0.6s 0.15s cubic-bezier(0.16, 1, 0.3, 1) both",
         }}
       >
-        Tandil
+        @SOMOSBLACK.AR
       </p>
 
       {/* Línea animada */}
@@ -84,7 +84,7 @@ export default function SplashScreen() {
           left: 0,
           height: "2px",
           backgroundColor: "#ffffff",
-          animation: "splashLine 3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+          animation: "splashLine 1s cubic-bezier(0.16, 1, 0.3, 1) forwards",
         }}
       />
 
