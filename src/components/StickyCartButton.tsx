@@ -1,4 +1,4 @@
-"use client";
+/* "use client";
 
 import { useState } from "react";
 import { Product } from "@/types";
@@ -35,8 +35,8 @@ export default function StickyCartButton({ product, selectedSize, onSizeError }:
             : "bg-[#111] text-white hover:bg-[#333]"
         }`}
       >
-        {added ? "✓ Agregado al carrito" : "Seleccionar Talle"}
+        {added ? "✓ Agregado al carrito" : "Agregar al carrito"}
       </button>
     </div>
   );
-}
+} */

@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { getProductById } from "@/data/products";
 import { useCart } from "@/context/CartContext";
 import { Product } from "@/types";
-import StickyCartButton from "@/components/StickyCartButton";
+/*  import StickyCartButton from "@/components/StickyCartButton";*/
 
 export default function ProductPage() {
   const params = useParams();
@@ -217,7 +217,7 @@ export default function ProductPage() {
         ))}
       </div>
 
-      <StickyCartButton product={product} selectedSize={selectedSize} onSizeError={handleSizeError} />
+  {/*     <StickyCartButton product={product} selectedSize={selectedSize} onSizeError={handleSizeError} /> */}
     </div>
   );
 }

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { getProductById } from "@/data/products";
 import { useCart } from "@/context/CartContext";
 import { Product } from "@/types";
-import StickyCartButton from "@/components/StickyCartButton";
+/* import StickyCartButton from "@/components/StickyCartButton"; */
 
 export default function ProductPageClient({ id }: { id: string }) {
   const router = useRouter();
@@ -18,6 +18,8 @@ export default function ProductPageClient({ id }: { id: string }) {
   const [sizeError, setSizeError] = useState(false);
   const [added, setAdded] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>(null);
+
+  const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     const p = getProductById(Number(id));
@@ -33,7 +35,7 @@ export default function ProductPageClient({ id }: { id: string }) {
   const handleSizeError = () => {
     setSizeError(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
-    setTimeout(() => setSizeError(false), 2000);
+    // NO hay setTimeout — el error se queda hasta que elija talle
   };
 
   const handleAddToCart = () => {
@@ -42,6 +44,20 @@ export default function ProductPageClient({ id }: { id: string }) {
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
     openCart();
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) setSelectedImage(i => Math.min(i + 1, images.length - 1));
+      else setSelectedImage(i => Math.max(i - 1, 0));
+    }
+    touchStartX.current = null;
   };
 
   const stockForSize = selectedSize && product.stockBySize
@@ -63,19 +79,33 @@ export default function ProductPageClient({ id }: { id: string }) {
         Volver
       </button>
 
-      {/* Galería */}
-      <div className="relative w-full aspect-square bg-[#ECEAE4] overflow-hidden">
+      {/* Galería con swipe */}
+      <div
+        className="relative w-full aspect-square bg-[#ECEAE4] overflow-hidden"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         <Image src={images[selectedImage]} alt={product.name} fill sizes="100vw" priority className="object-cover" />
-        {images.length > 1 && (
-          <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
-            {images.map((_, i) => (
-              <button key={i} onClick={() => setSelectedImage(i)}
-                className={`h-1.5 rounded-full transition-all bg-white ${i === selectedImage ? "w-4 opacity-100" : "w-1.5 opacity-50"}`}
-              />
-            ))}
-          </div>
-        )}
       </div>
+
+      {/* Miniaturas */}
+      {images.length > 1 && (
+        <div className="flex gap-2 px-4 mt-3 overflow-x-auto">
+          {images.map((img, i) => (
+            <button
+              key={i}
+              onClick={() => setSelectedImage(i)}
+              className={`flex-shrink-0 w-16 h-16 rounded-sm overflow-hidden border-2 transition-all ${
+                i === selectedImage ? "border-[#111]" : "border-transparent opacity-50"
+              }`}
+            >
+              <div className="relative w-full h-full">
+                <Image src={img} alt={`${product.name} ${i + 1}`} fill className="object-cover" />
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Info */}
       <div className="px-4 pt-5">
@@ -101,7 +131,7 @@ export default function ProductPageClient({ id }: { id: string }) {
             const stock = product.stockBySize?.[size] ?? 99;
             const outOfStock = stock === 0;
             return (
-              <button key={size} onClick={() => !outOfStock && setSelectedSize(size)} disabled={outOfStock}
+              <button key={size} onClick={() => { if (!outOfStock) { setSelectedSize(size); setSizeError(false); } }} disabled={outOfStock}
                 className={`py-3 border rounded-sm font-dm font-semibold text-sm transition-all relative ${
                   selectedSize === size ? "bg-[#111] text-white border-[#111]"
                   : outOfStock ? "bg-[#F5F4F0] text-[#CCC] border-[#E0DED8] cursor-not-allowed line-through"
@@ -182,7 +212,7 @@ export default function ProductPageClient({ id }: { id: string }) {
         ))}
       </div>
 
-      <StickyCartButton product={product} selectedSize={selectedSize} onSizeError={handleSizeError} />
+    {/*   <StickyCartButton product={product} selectedSize={selectedSize} onSizeError={handleSizeError} /> */}
     </div>
   );
 }
