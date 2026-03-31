@@ -23,9 +23,12 @@ export default function ProductPageClient({ id }: { id: string }) {
 
   useEffect(() => {
     const p = getProductById(Number(id));
+    console.log("valor p"+p);
     if (!p) router.push("/");
     else setProduct(p);
   }, [id, router]);
+
+  console.log("images del producto:", product?.images);
 
   if (!product) return null;
 
@@ -67,7 +70,7 @@ export default function ProductPageClient({ id }: { id: string }) {
   const toggleSection = (section: string) => {
     setOpenSection(prev => prev === section ? null : section);
   };
-
+  console.log("images:", images, "length:", images.length);
   return (
     <div className="w-full pb-28">
 
@@ -87,9 +90,9 @@ export default function ProductPageClient({ id }: { id: string }) {
       >
         <Image src={images[selectedImage]} alt={product.name} fill sizes="100vw" priority className="object-cover" />
       </div>
-
+      
       {/* Miniaturas */}
-      {images.length > 1 && (
+      {images.length >= 0  && (
         <div className="flex gap-2 px-4 mt-3 overflow-x-auto">
           {images.map((img, i) => (
             <button
