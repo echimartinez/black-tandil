@@ -4,7 +4,7 @@ export const products: Product[] = [
    {
     id: 1,
     name: "Camisaco Oversize Marron",
-    price: 1,
+    price: 100,
     image: "/camisacos.png",
     images: ["/camisacos.png", "/camisaco2.png"],
     category: "Camisacos",
