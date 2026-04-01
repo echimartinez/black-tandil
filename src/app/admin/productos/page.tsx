@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { categories } from "@/data/categories";
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 const EMPTY_FORM = {
@@ -14,6 +13,7 @@ const EMPTY_FORM = {
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
@@ -29,7 +29,12 @@ export default function AdminProductsPage() {
       .then(data => { setProducts(Array.isArray(data) ? data : []); setLoading(false); });
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    fetch("/api/admin/categories")
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setCategories(data); });
+  }, []);
 
   const openCreate = () => { setEditing(null); setForm(EMPTY_FORM); setShowForm(true); };
 
@@ -196,14 +201,12 @@ export default function AdminProductsPage() {
                 <input type="text" value={form.image} onChange={e => setForm(prev => ({ ...prev, image: e.target.value }))} placeholder="Ej: /camisaco.png" className="w-full border border-[#E0DED8] px-4 py-3 font-dm text-sm text-[#111] placeholder-[#CCC] focus:outline-none focus:border-[#111] rounded-sm transition-colors" />
               </div>
 
-
-
               <div>
                 <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">Categoría</label>
                 <select value={form.category} onChange={e => setForm(prev => ({ ...prev, category: e.target.value }))} className="w-full border border-[#E0DED8] px-4 py-3 font-dm text-sm text-[#111] focus:outline-none focus:border-[#111] rounded-sm transition-colors bg-white">
                   <option value="">Seleccioná una categoría</option>
                   {categories.map(cat =>
-                    cat.subcategories.map(sub => (
+                    cat.subcategories?.map((sub: any) => (
                       <option key={sub.slug} value={`${cat.name} / ${sub.name}`}>{cat.name} / {sub.name}</option>
                     ))
                   )}
@@ -214,18 +217,19 @@ export default function AdminProductsPage() {
                 <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">Descripción corta</label>
                 <input type="text" value={form.description} onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))} placeholder="Para la card del producto" className="w-full border border-[#E0DED8] px-4 py-3 font-dm text-sm text-[#111] placeholder-[#CCC] focus:outline-none focus:border-[#111] rounded-sm transition-colors" />
               </div>
+
               {form.image && (
                 <div className="relative w-full aspect-square bg-[#ECEAE4] rounded-sm overflow-hidden">
                   <Image src={form.image} alt="Preview" fill sizes="400px" className="object-cover" />
                 </div>
               )}
+
               <div className="border border-[#E0DED8] rounded-sm px-4 divide-y divide-[#E0DED8]">
                 <Toggle label="Activo (visible en la tienda)" value={form.active} onChange={() => setForm(p => ({ ...p, active: !p.active }))} />
                 <Toggle label="En SALE (aparece en sección de ofertas)" value={form.sale} onChange={() => setForm(p => ({ ...p, sale: !p.sale }))} />
                 <Toggle label="Novedad (aparece en sección NUEVO)" value={form.isNew} onChange={() => setForm(p => ({ ...p, isNew: !p.isNew }))} />
                 <Toggle label="Destacado (aparece en home)" value={form.featured} onChange={() => setForm(p => ({ ...p, featured: !p.featured }))} />
               </div>
-
 
               <div>
                 <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-2">Talles disponibles</label>

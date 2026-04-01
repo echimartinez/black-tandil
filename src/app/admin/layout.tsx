@@ -17,6 +17,11 @@ const NAV = [
     icon: "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4",
   },
   {
+    label: "Categorías",
+    href: "/admin/categorias",
+    icon: "M4 6h16M4 10h16M4 14h16M4 18h16",
+  },
+  {
     label: "Órdenes",
     href: "/admin/ordenes",
     icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2",
@@ -94,31 +99,21 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen flex bg-[#F5F4F0]">
-
-      {/* Sidebar desktop — fijo, visible en md+ */}
       <aside className="hidden md:flex w-56 bg-[#111] flex-col flex-shrink-0 fixed left-0 top-0 h-full z-30">
         <SidebarContent pathname={pathname} />
       </aside>
 
-      {/* Overlay mobile */}
       {mobileOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
+        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setMobileOpen(false)} />
       )}
 
-      {/* Sidebar mobile — drawer desde la izquierda */}
       <aside className={`fixed left-0 top-0 h-full w-64 bg-[#111] z-50 flex flex-col flex-shrink-0 transition-transform duration-300 ease-in-out md:hidden ${
         mobileOpen ? "translate-x-0" : "-translate-x-full"
       }`}>
         <SidebarContent pathname={pathname} onClose={() => setMobileOpen(false)} />
       </aside>
 
-      {/* Contenido principal */}
       <div className="flex-1 flex flex-col min-w-0 md:ml-56">
-
-        {/* Top bar mobile */}
         <div className="md:hidden bg-[#111] px-4 py-3 flex items-center gap-3 sticky top-0 z-20">
           <button onClick={() => setMobileOpen(true)} className="text-white p-1">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -134,8 +129,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           {children}
         </main>
       </div>
-
     </div>
   );
 }
-
