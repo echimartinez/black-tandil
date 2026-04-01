@@ -1,7 +1,8 @@
 export interface Product {
-  id: number;
+  id: number | string;
   name: string;
   price: number;
+  originalPrice?: number;
   image: string;
   images?: string[];
   description?: string;
@@ -12,14 +13,18 @@ export interface Product {
   stockBySize?: Record<string, number>;
   sizes?: string[];
   category?: string;
+  sale?: boolean;
+  isNew?: boolean;
+  featured?: boolean;
+  active?: boolean;
 }
- 
+
 export interface CartItem {
   product: Product;
   size: string;
   quantity: number;
 }
- 
+
 export interface Order {
   external_reference: string;
   title: string;
@@ -28,11 +33,11 @@ export interface Order {
   payment_id?: string;
   createdAt?: Date;
 }
- 
+
 export interface CheckoutResponse {
   init_point: string;
 }
- 
+
 export interface CheckoutError {
   error: string;
 }

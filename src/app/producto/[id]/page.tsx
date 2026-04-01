@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { getProductById } from "@/data/products";
 import { useCart } from "@/context/CartContext";
 import { Product } from "@/types";
 
@@ -25,11 +24,22 @@ export default function ProductPage() {
   useEffect(() => {
     const rawId = Array.isArray(params?.id) ? params.id[0] : params?.id;
     if (!rawId) return;
-    const numId = Number(rawId);
-    if (isNaN(numId)) { setNotFound(true); return; }
-    const p = getProductById(numId);
-    if (!p) setNotFound(true);
-    else setProduct(p);
+
+    fetch(`/api/products/${rawId}`)
+      .then(r => {
+        if (!r.ok) { setNotFound(true); return null; }
+        return r.json();
+      })
+      .then(data => {
+        if (!data) return;
+        // Normalizar _id → id y stockBySize (Map de Mongoose → objeto plano)
+        setProduct({
+          ...data,
+          id: data._id,
+          stockBySize: data.stockBySize ? Object.fromEntries(Object.entries(data.stockBySize)) : undefined,
+        });
+      })
+      .catch(() => setNotFound(true));
   }, [params]);
 
   useEffect(() => {
@@ -58,7 +68,6 @@ export default function ProductPage() {
   const handleSizeError = () => {
     setSizeError(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
-    // Sin setTimeout — el error persiste hasta que se elija talle
   };
 
   const handleAddToCart = () => {
@@ -240,4 +249,3 @@ export default function ProductPage() {
     </div>
   );
 }
-

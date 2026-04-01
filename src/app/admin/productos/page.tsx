@@ -5,9 +5,10 @@ import Image from "next/image";
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 const EMPTY_FORM = {
-  name: "", price: "", image: "", category: "Camisacos",
+  name: "", price: "", originalPrice: "", image: "", category: "Camisacos",
   description: "", sizes: [] as string[],
   stockBySize: {} as Record<string, number>,
+  sale: false, isNew: false, featured: false, active: true,
 };
 
 export default function AdminProductsPage() {
@@ -40,11 +41,16 @@ export default function AdminProductsPage() {
     setForm({
       name: p.name,
       price: String(p.price),
+      originalPrice: p.originalPrice ? String(p.originalPrice) : "",
       image: p.image,
       category: p.category ?? "Camisacos",
       description: p.description ?? "",
       sizes: p.sizes ?? [],
       stockBySize: p.stockBySize ?? {},
+      sale: p.sale ?? false,
+      isNew: p.isNew ?? false,
+      featured: p.featured ?? false,
+      active: p.active ?? true,
     });
     setShowForm(true);
   };
@@ -64,7 +70,12 @@ export default function AdminProductsPage() {
       return;
     }
     setSaving(true);
-    const body = { ...form, price: Number(form.price), ...(editing ? { id: editing._id } : {}) };
+    const body = {
+      ...form,
+      price: Number(form.price),
+      originalPrice: form.originalPrice ? Number(form.originalPrice) : null,
+      ...(editing ? { id: editing._id } : {}),
+    };
     const method = editing ? "PUT" : "POST";
     await fetch("/api/admin/products", {
       method,
@@ -88,6 +99,15 @@ export default function AdminProductsPage() {
     load();
   };
 
+  const Toggle = ({ label, value, onChange }: { label: string; value: boolean; onChange: () => void }) => (
+    <button type="button" onClick={onChange} className="flex items-center justify-between w-full py-2">
+      <span className="font-dm text-sm text-[#111]">{label}</span>
+      <div className={`relative w-10 h-5 rounded-full transition-colors ${value ? "bg-[#111]" : "bg-[#E0DED8]"}`}>
+        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${value ? "translate-x-5" : "translate-x-0.5"}`} />
+      </div>
+    </button>
+  );
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -104,7 +124,6 @@ export default function AdminProductsPage() {
         </button>
       </div>
 
-      {/* Grilla de productos */}
       {loading ? (
         <div className="flex justify-center py-16">
           <div className="w-6 h-6 border-2 border-[#111] border-t-transparent rounded-full animate-spin" />
@@ -131,6 +150,12 @@ export default function AdminProductsPage() {
                   {product.image && (
                     <Image src={product.image} alt={product.name} fill sizes="300px" className="object-cover" />
                   )}
+                  {/* Badges */}
+                  <div className="absolute top-2 left-2 flex flex-col gap-1">
+                    {product.sale && <span className="bg-[#E63A2E] text-white font-dm text-[9px] font-bold px-2 py-0.5 rounded-full">SALE</span>}
+                    {product.isNew && <span className="bg-[#111] text-white font-dm text-[9px] font-bold px-2 py-0.5 rounded-full">NUEVO</span>}
+                    {product.featured && <span className="bg-[#2A7D4F] text-white font-dm text-[9px] font-bold px-2 py-0.5 rounded-full">DESTACADO</span>}
+                  </div>
                   {totalStock === 0 && (
                     <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
                       <span className="bg-white font-dm text-xs font-bold uppercase px-3 py-1 rounded-full text-[#E63A2E]">
@@ -144,11 +169,17 @@ export default function AdminProductsPage() {
                     {product.category}
                   </span>
                   <h3 className="font-dm font-semibold text-sm text-[#111] mt-0.5">{product.name}</h3>
-                  <p className="font-dm font-bold text-base text-[#111] mt-1">
-                    ${Number(product.price).toLocaleString("es-AR")}
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="font-dm font-bold text-base text-[#111]">
+                      ${Number(product.price).toLocaleString("es-AR")}
+                    </p>
+                    {product.originalPrice && (
+                      <p className="font-dm text-sm text-[#AAA] line-through">
+                        ${Number(product.originalPrice).toLocaleString("es-AR")}
+                      </p>
+                    )}
+                  </div>
 
-                  {/* Stock por talle */}
                   {product.sizes?.length > 0 && (
                     <div className="flex gap-1.5 flex-wrap mt-2">
                       {product.sizes.map((size: string) => {
@@ -226,6 +257,7 @@ export default function AdminProductsPage() {
               {[
                 { key: "name", label: "Nombre del producto", placeholder: "Ej: Camisaco Oversize Marrón" },
                 { key: "price", label: "Precio (ARS)", placeholder: "Ej: 15000", type: "number" },
+                { key: "originalPrice", label: "Precio original (antes del descuento)", placeholder: "Dejar vacío si no está en sale", type: "number" },
                 { key: "image", label: "Imagen principal (ruta)", placeholder: "Ej: /camisaco.png" },
                 { key: "category", label: "Categoría", placeholder: "Ej: Camisacos" },
                 { key: "description", label: "Descripción corta", placeholder: "Para la card del producto" },
@@ -248,6 +280,14 @@ export default function AdminProductsPage() {
                   <Image src={form.image} alt="Preview" fill sizes="400px" className="object-cover" />
                 </div>
               )}
+
+              {/* Toggles */}
+              <div className="border border-[#E0DED8] rounded-sm px-4 divide-y divide-[#E0DED8]">
+                <Toggle label="Activo (visible en la tienda)" value={form.active} onChange={() => setForm(p => ({ ...p, active: !p.active }))} />
+                <Toggle label="En SALE (aparece en sección de ofertas)" value={form.sale} onChange={() => setForm(p => ({ ...p, sale: !p.sale }))} />
+                <Toggle label="Novedad (aparece en sección NUEVO)" value={form.isNew} onChange={() => setForm(p => ({ ...p, isNew: !p.isNew }))} />
+                <Toggle label="Destacado (aparece en home)" value={form.featured} onChange={() => setForm(p => ({ ...p, featured: !p.featured }))} />
+              </div>
 
               {/* Talles */}
               <div>
@@ -291,7 +331,6 @@ export default function AdminProductsPage() {
               )}
             </div>
 
-            {/* Footer */}
             <div className="px-5 py-4 border-t border-[#E0DED8] sticky bottom-0 bg-white flex gap-2">
               <button onClick={() => setShowForm(false)}
                 className="flex-1 border border-[#E0DED8] text-[#888] font-dm font-semibold text-xs uppercase tracking-widest py-3.5 rounded-sm hover:border-[#111] transition-colors">

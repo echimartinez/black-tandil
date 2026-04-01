@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { products as allProducts } from "@/data/products";
 import { Product } from "@/types";
 
 type SortOption = "nuevo" | "precio-asc" | "precio-desc";
@@ -25,12 +24,14 @@ const ALL_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 const EMPTY_FILTERS: Filters = { sizes: [], priceMin: null, priceMax: null, soloConStock: false };
 
 interface ProductGridProps {
-  productList?: Product[]; // si no se pasa, usa todos
+  productList?: Product[];
 }
 
 export default function ProductGrid({ productList }: ProductGridProps) {
   const router = useRouter();
-  const sourceProducts = productList ?? allProducts;
+
+  const [dbProducts, setDbProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(!productList);
 
   const [sort, setSort] = useState<SortOption>("nuevo");
   const [sortOpen, setSortOpen] = useState(false);
@@ -38,6 +39,26 @@ export default function ProductGrid({ productList }: ProductGridProps) {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [tempFilters, setTempFilters] = useState<Filters>(EMPTY_FILTERS);
   const sortRef = useRef<HTMLDivElement>(null);
+
+  // Cargar productos desde MongoDB si no se pasan por prop
+  useEffect(() => {
+    if (productList) return;
+    fetch("/api/products")
+      .then(r => r.json())
+      .then(data => {
+        // Normalizar: MongoDB usa _id, lo mapeamos a id para compatibilidad
+        const normalized = data.map((p: any) => ({
+          ...p,
+          id: p._id,
+          stockBySize: p.stockBySize ? Object.fromEntries(Object.entries(p.stockBySize)) : undefined,
+        }));
+        setDbProducts(normalized);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [productList]);
+
+  const sourceProducts = productList ?? dbProducts;
 
   // Cerrar dropdown de sort al click afuera
   useEffect(() => {
@@ -54,7 +75,6 @@ export default function ProductGrid({ productList }: ProductGridProps) {
     return () => { document.body.style.overflow = ""; };
   }, [filterOpen]);
 
-  // Talles disponibles en este listado
   const availableSizes = useMemo(() => {
     const set = new Set<string>();
     sourceProducts.forEach(p => (p.sizes ?? []).forEach(s => set.add(s)));
@@ -63,6 +83,7 @@ export default function ProductGrid({ productList }: ProductGridProps) {
 
   const [globalMin, globalMax] = useMemo(() => {
     const prices = sourceProducts.map(p => p.price);
+    if (prices.length === 0) return [0, 0];
     return [Math.min(...prices), Math.max(...prices)];
   }, [sourceProducts]);
 
@@ -121,6 +142,21 @@ export default function ProductGrid({ productList }: ProductGridProps) {
   const openFilterPanel = () => { setTempFilters(filters); setFilterOpen(true); };
   const applyFilters = () => { setFilters(tempFilters); setFilterOpen(false); };
   const clearFilters = () => { setFilters(EMPTY_FILTERS); setTempFilters(EMPTY_FILTERS); setFilterOpen(false); };
+
+  if (loading) return (
+    <div className="grid grid-cols-2 gap-[1px] bg-[#E0DED8] mt-[1px]">
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="bg-[#F5F4F0] animate-pulse">
+          <div className="aspect-square bg-[#ECEAE4]" />
+          <div className="p-3 space-y-2">
+            <div className="h-2 bg-[#E0DED8] rounded w-1/3" />
+            <div className="h-3 bg-[#E0DED8] rounded w-3/4" />
+            <div className="h-3 bg-[#E0DED8] rounded w-1/4 mt-2" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="w-full">
