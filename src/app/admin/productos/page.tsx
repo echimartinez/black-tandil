@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { categories } from "@/data/categories";
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 const EMPTY_FORM = {
-  name: "", price: "", originalPrice: "", image: "", category: "Camisacos",
+  name: "", price: "", originalPrice: "", image: "", category: "",
   description: "", sizes: [] as string[],
   stockBySize: {} as Record<string, number>,
   sale: false, isNew: false, featured: false, active: true,
@@ -30,27 +31,18 @@ export default function AdminProductsPage() {
 
   useEffect(() => { load(); }, []);
 
-  const openCreate = () => {
-    setEditing(null);
-    setForm(EMPTY_FORM);
-    setShowForm(true);
-  };
+  const openCreate = () => { setEditing(null); setForm(EMPTY_FORM); setShowForm(true); };
 
   const openEdit = (p: any) => {
     setEditing(p);
     setForm({
-      name: p.name,
-      price: String(p.price),
+      name: p.name, price: String(p.price),
       originalPrice: p.originalPrice ? String(p.originalPrice) : "",
-      image: p.image,
-      category: p.category ?? "Camisacos",
-      description: p.description ?? "",
-      sizes: p.sizes ?? [],
+      image: p.image, category: p.category ?? "",
+      description: p.description ?? "", sizes: p.sizes ?? [],
       stockBySize: p.stockBySize ?? {},
-      sale: p.sale ?? false,
-      isNew: p.isNew ?? false,
-      featured: p.featured ?? false,
-      active: p.active ?? true,
+      sale: p.sale ?? false, isNew: p.isNew ?? false,
+      featured: p.featured ?? false, active: p.active ?? true,
     });
     setShowForm(true);
   };
@@ -58,45 +50,22 @@ export default function AdminProductsPage() {
   const toggleSize = (size: string) => {
     setForm(prev => ({
       ...prev,
-      sizes: prev.sizes.includes(size)
-        ? prev.sizes.filter(s => s !== size)
-        : [...prev.sizes, size],
+      sizes: prev.sizes.includes(size) ? prev.sizes.filter(s => s !== size) : [...prev.sizes, size],
     }));
   };
 
   const handleSave = async () => {
-    if (!form.name || !form.price || !form.image) {
-      alert("Nombre, precio e imagen son requeridos.");
-      return;
-    }
+    if (!form.name || !form.price || !form.image) { alert("Nombre, precio e imagen son requeridos."); return; }
     setSaving(true);
-    const body = {
-      ...form,
-      price: Number(form.price),
-      originalPrice: form.originalPrice ? Number(form.originalPrice) : null,
-      ...(editing ? { id: editing._id } : {}),
-    };
-    const method = editing ? "PUT" : "POST";
-    await fetch("/api/admin/products", {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    setSaving(false);
-    setShowForm(false);
-    load();
+    const body = { ...form, price: Number(form.price), originalPrice: form.originalPrice ? Number(form.originalPrice) : null, ...(editing ? { id: editing._id } : {}) };
+    await fetch("/api/admin/products", { method: editing ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    setSaving(false); setShowForm(false); load();
   };
 
   const handleDelete = async (id: string) => {
     setDeletingId(id);
-    await fetch("/api/admin/products", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    setDeletingId(null);
-    setConfirmDelete(null);
-    load();
+    await fetch("/api/admin/products", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    setDeletingId(null); setConfirmDelete(null); load();
   };
 
   const Toggle = ({ label, value, onChange }: { label: string; value: boolean; onChange: () => void }) => (
@@ -115,42 +84,28 @@ export default function AdminProductsPage() {
           <h1 className="font-bebas text-4xl tracking-tight text-[#111]">PRODUCTOS</h1>
           <p className="font-dm text-sm text-[#888] mt-0.5">{products.length} productos</p>
         </div>
-        <button onClick={openCreate}
-          className="flex items-center gap-2 bg-[#111] text-white font-dm font-semibold text-xs uppercase tracking-widest px-4 py-2.5 rounded-sm hover:bg-[#333] transition-colors">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
+        <button onClick={openCreate} className="flex items-center gap-2 bg-[#111] text-white font-dm font-semibold text-xs uppercase tracking-widest px-4 py-2.5 rounded-sm hover:bg-[#333] transition-colors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
           Nuevo producto
         </button>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-16">
-          <div className="w-6 h-6 border-2 border-[#111] border-t-transparent rounded-full animate-spin" />
-        </div>
+        <div className="flex justify-center py-16"><div className="w-6 h-6 border-2 border-[#111] border-t-transparent rounded-full animate-spin" /></div>
       ) : products.length === 0 ? (
         <div className="text-center py-16 bg-white border border-[#E0DED8] rounded-sm">
           <p className="font-bebas text-2xl text-[#CCC] mb-2">SIN PRODUCTOS</p>
           <p className="font-dm text-sm text-[#888] mb-4">Creá tu primer producto.</p>
-          <button onClick={openCreate}
-            className="font-dm text-xs font-semibold uppercase tracking-widest px-6 py-3 bg-[#111] text-white rounded-sm hover:bg-[#333] transition-colors">
-            Agregar producto
-          </button>
+          <button onClick={openCreate} className="font-dm text-xs font-semibold uppercase tracking-widest px-6 py-3 bg-[#111] text-white rounded-sm hover:bg-[#333] transition-colors">Agregar producto</button>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {products.map(product => {
-            const totalStock = product.stockBySize
-              ? Object.values(product.stockBySize as Record<string, number>).reduce((a: number, b: any) => a + Number(b), 0)
-              : 0;
-
+            const totalStock = product.stockBySize ? Object.values(product.stockBySize as Record<string, number>).reduce((a: number, b: any) => a + Number(b), 0) : 0;
             return (
               <div key={product._id} className="bg-white border border-[#E0DED8] rounded-sm overflow-hidden">
                 <div className="relative aspect-square bg-[#ECEAE4]">
-                  {product.image && (
-                    <Image src={product.image} alt={product.name} fill sizes="300px" className="object-cover" />
-                  )}
-                  {/* Badges */}
+                  {product.image && <Image src={product.image} alt={product.name} fill sizes="300px" className="object-cover" />}
                   <div className="absolute top-2 left-2 flex flex-col gap-1">
                     {product.sale && <span className="bg-[#E63A2E] text-white font-dm text-[9px] font-bold px-2 py-0.5 rounded-full">SALE</span>}
                     {product.isNew && <span className="bg-[#111] text-white font-dm text-[9px] font-bold px-2 py-0.5 rounded-full">NUEVO</span>}
@@ -158,54 +113,32 @@ export default function AdminProductsPage() {
                   </div>
                   {totalStock === 0 && (
                     <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                      <span className="bg-white font-dm text-xs font-bold uppercase px-3 py-1 rounded-full text-[#E63A2E]">
-                        Sin stock
-                      </span>
+                      <span className="bg-white font-dm text-xs font-bold uppercase px-3 py-1 rounded-full text-[#E63A2E]">Sin stock</span>
                     </div>
                   )}
                 </div>
                 <div className="p-4">
-                  <span className="font-dm text-[10px] text-[#E63A2E] uppercase tracking-wider font-semibold">
-                    {product.category}
-                  </span>
+                  <span className="font-dm text-[10px] text-[#E63A2E] uppercase tracking-wider font-semibold">{product.category}</span>
                   <h3 className="font-dm font-semibold text-sm text-[#111] mt-0.5">{product.name}</h3>
                   <div className="flex items-center gap-2 mt-1">
-                    <p className="font-dm font-bold text-base text-[#111]">
-                      ${Number(product.price).toLocaleString("es-AR")}
-                    </p>
-                    {product.originalPrice && (
-                      <p className="font-dm text-sm text-[#AAA] line-through">
-                        ${Number(product.originalPrice).toLocaleString("es-AR")}
-                      </p>
-                    )}
+                    <p className="font-dm font-bold text-base text-[#111]">${Number(product.price).toLocaleString("es-AR")}</p>
+                    {product.originalPrice && <p className="font-dm text-sm text-[#AAA] line-through">${Number(product.originalPrice).toLocaleString("es-AR")}</p>}
                   </div>
-
                   {product.sizes?.length > 0 && (
                     <div className="flex gap-1.5 flex-wrap mt-2">
                       {product.sizes.map((size: string) => {
                         const stock = Number(product.stockBySize?.[size] ?? 0);
                         return (
-                          <div key={size} className={`font-dm text-[10px] font-semibold px-1.5 py-0.5 border rounded-sm ${
-                            stock === 0 ? "border-[#E8E6E0] text-[#CCC]" :
-                            stock <= 2 ? "border-[#E63A2E] text-[#E63A2E]" :
-                            "border-[#E0DED8] text-[#444]"
-                          }`}>
+                          <div key={size} className={`font-dm text-[10px] font-semibold px-1.5 py-0.5 border rounded-sm ${stock === 0 ? "border-[#E8E6E0] text-[#CCC]" : stock <= 2 ? "border-[#E63A2E] text-[#E63A2E]" : "border-[#E0DED8] text-[#444]"}`}>
                             {size} ({stock})
                           </div>
                         );
                       })}
                     </div>
                   )}
-
                   <div className="flex gap-2 mt-4">
-                    <button onClick={() => openEdit(product)}
-                      className="flex-1 font-dm text-xs font-semibold uppercase tracking-wider py-2 border border-[#111] text-[#111] hover:bg-[#111] hover:text-white transition-colors rounded-sm">
-                      Editar
-                    </button>
-                    <button onClick={() => setConfirmDelete(product._id)}
-                      className="flex-1 font-dm text-xs font-semibold uppercase tracking-wider py-2 border border-[#E63A2E] text-[#E63A2E] hover:bg-[#E63A2E] hover:text-white transition-colors rounded-sm">
-                      Eliminar
-                    </button>
+                    <button onClick={() => openEdit(product)} className="flex-1 font-dm text-xs font-semibold uppercase tracking-wider py-2 border border-[#111] text-[#111] hover:bg-[#111] hover:text-white transition-colors rounded-sm">Editar</button>
+                    <button onClick={() => setConfirmDelete(product._id)} className="flex-1 font-dm text-xs font-semibold uppercase tracking-wider py-2 border border-[#E63A2E] text-[#E63A2E] hover:bg-[#E63A2E] hover:text-white transition-colors rounded-sm">Eliminar</button>
                   </div>
                 </div>
               </div>
@@ -214,7 +147,6 @@ export default function AdminProductsPage() {
         </div>
       )}
 
-      {/* Modal confirmación eliminar */}
       {confirmDelete && (
         <>
           <div className="fixed inset-0 bg-black/50 z-50" onClick={() => setConfirmDelete(null)} />
@@ -222,12 +154,8 @@ export default function AdminProductsPage() {
             <h3 className="font-bebas text-2xl text-[#111] mb-1">ELIMINAR PRODUCTO</h3>
             <p className="font-dm text-sm text-[#888] mb-5">Esta acción no se puede deshacer.</p>
             <div className="flex gap-2">
-              <button onClick={() => setConfirmDelete(null)}
-                className="flex-1 border border-[#E0DED8] text-[#888] font-dm font-semibold text-xs uppercase tracking-widest py-3 rounded-sm hover:border-[#111] transition-colors">
-                Cancelar
-              </button>
-              <button onClick={() => handleDelete(confirmDelete)} disabled={deletingId === confirmDelete}
-                className="flex-1 bg-[#E63A2E] text-white font-dm font-semibold text-xs uppercase tracking-widest py-3 rounded-sm hover:bg-red-700 transition-colors disabled:opacity-50">
+              <button onClick={() => setConfirmDelete(null)} className="flex-1 border border-[#E0DED8] text-[#888] font-dm font-semibold text-xs uppercase tracking-widest py-3 rounded-sm hover:border-[#111] transition-colors">Cancelar</button>
+              <button onClick={() => handleDelete(confirmDelete)} disabled={deletingId === confirmDelete} className="flex-1 bg-[#E63A2E] text-white font-dm font-semibold text-xs uppercase tracking-widest py-3 rounded-sm hover:bg-red-700 transition-colors disabled:opacity-50">
                 {deletingId === confirmDelete ? "Eliminando..." : "Eliminar"}
               </button>
             </div>
@@ -235,53 +163,62 @@ export default function AdminProductsPage() {
         </>
       )}
 
-      {/* Panel crear/editar */}
       {showForm && (
         <>
           <div className="fixed inset-0 bg-black/50 z-50" onClick={() => setShowForm(false)} />
           <div className="fixed top-0 right-0 h-full w-full max-w-md bg-white z-50 flex flex-col shadow-2xl overflow-y-auto">
-
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#E0DED8] sticky top-0 bg-white">
-              <h2 className="font-bebas text-2xl tracking-tight text-[#111]">
-                {editing ? "EDITAR PRODUCTO" : "NUEVO PRODUCTO"}
-              </h2>
+              <h2 className="font-bebas text-2xl tracking-tight text-[#111]">{editing ? "EDITAR PRODUCTO" : "NUEVO PRODUCTO"}</h2>
               <button onClick={() => setShowForm(false)} className="text-[#888] hover:text-[#111] p-1">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M18 6L6 18M6 6l12 12"/>
-                </svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
               </button>
             </div>
 
             <div className="px-5 py-5 space-y-4 flex-1">
 
-              {[
-                { key: "name", label: "Nombre del producto", placeholder: "Ej: Camisaco Oversize Marrón" },
-                { key: "price", label: "Precio (ARS)", placeholder: "Ej: 15000", type: "number" },
-                { key: "originalPrice", label: "Precio original (antes del descuento)", placeholder: "Dejar vacío si no está en sale", type: "number" },
-                { key: "image", label: "Imagen principal (ruta)", placeholder: "Ej: /camisaco.png" },
-                { key: "category", label: "Categoría", placeholder: "Ej: Camisacos" },
-                { key: "description", label: "Descripción corta", placeholder: "Para la card del producto" },
-              ].map(field => (
-                <div key={field.key}>
-                  <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">{field.label}</label>
-                  <input
-                    type={field.type ?? "text"}
-                    value={(form as any)[field.key]}
-                    onChange={e => setForm(prev => ({ ...prev, [field.key]: e.target.value }))}
-                    placeholder={field.placeholder}
-                    className="w-full border border-[#E0DED8] px-4 py-3 font-dm text-sm text-[#111] placeholder-[#CCC] focus:outline-none focus:border-[#111] rounded-sm transition-colors"
-                  />
-                </div>
-              ))}
+              <div>
+                <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">Nombre del producto</label>
+                <input type="text" value={form.name} onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))} placeholder="Ej: Camisaco Oversize Marrón" className="w-full border border-[#E0DED8] px-4 py-3 font-dm text-sm text-[#111] placeholder-[#CCC] focus:outline-none focus:border-[#111] rounded-sm transition-colors" />
+              </div>
 
-              {/* Vista previa de imagen */}
+              <div>
+                <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">Precio (ARS)</label>
+                <input type="number" value={form.price} onChange={e => setForm(prev => ({ ...prev, price: e.target.value }))} placeholder="Ej: 15000" className="w-full border border-[#E0DED8] px-4 py-3 font-dm text-sm text-[#111] placeholder-[#CCC] focus:outline-none focus:border-[#111] rounded-sm transition-colors" />
+              </div>
+
+              <div>
+                <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">Precio original (antes del descuento)</label>
+                <input type="number" value={form.originalPrice} onChange={e => setForm(prev => ({ ...prev, originalPrice: e.target.value }))} placeholder="Dejar vacío si no está en sale" className="w-full border border-[#E0DED8] px-4 py-3 font-dm text-sm text-[#111] placeholder-[#CCC] focus:outline-none focus:border-[#111] rounded-sm transition-colors" />
+              </div>
+
+              <div>
+                <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">Imagen principal (ruta)</label>
+                <input type="text" value={form.image} onChange={e => setForm(prev => ({ ...prev, image: e.target.value }))} placeholder="Ej: /camisaco.png" className="w-full border border-[#E0DED8] px-4 py-3 font-dm text-sm text-[#111] placeholder-[#CCC] focus:outline-none focus:border-[#111] rounded-sm transition-colors" />
+              </div>
+
+
+
+              <div>
+                <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">Categoría</label>
+                <select value={form.category} onChange={e => setForm(prev => ({ ...prev, category: e.target.value }))} className="w-full border border-[#E0DED8] px-4 py-3 font-dm text-sm text-[#111] focus:outline-none focus:border-[#111] rounded-sm transition-colors bg-white">
+                  <option value="">Seleccioná una categoría</option>
+                  {categories.map(cat =>
+                    cat.subcategories.map(sub => (
+                      <option key={sub.slug} value={`${cat.name} / ${sub.name}`}>{cat.name} / {sub.name}</option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">Descripción corta</label>
+                <input type="text" value={form.description} onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))} placeholder="Para la card del producto" className="w-full border border-[#E0DED8] px-4 py-3 font-dm text-sm text-[#111] placeholder-[#CCC] focus:outline-none focus:border-[#111] rounded-sm transition-colors" />
+              </div>
               {form.image && (
                 <div className="relative w-full aspect-square bg-[#ECEAE4] rounded-sm overflow-hidden">
                   <Image src={form.image} alt="Preview" fill sizes="400px" className="object-cover" />
                 </div>
               )}
-
-              {/* Toggles */}
               <div className="border border-[#E0DED8] rounded-sm px-4 divide-y divide-[#E0DED8]">
                 <Toggle label="Activo (visible en la tienda)" value={form.active} onChange={() => setForm(p => ({ ...p, active: !p.active }))} />
                 <Toggle label="En SALE (aparece en sección de ofertas)" value={form.sale} onChange={() => setForm(p => ({ ...p, sale: !p.sale }))} />
@@ -289,24 +226,19 @@ export default function AdminProductsPage() {
                 <Toggle label="Destacado (aparece en home)" value={form.featured} onChange={() => setForm(p => ({ ...p, featured: !p.featured }))} />
               </div>
 
-              {/* Talles */}
+
               <div>
                 <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-2">Talles disponibles</label>
                 <div className="flex flex-wrap gap-2">
                   {SIZES.map(size => (
                     <button key={size} type="button" onClick={() => toggleSize(size)}
-                      className={`font-dm text-sm font-semibold px-4 py-2 border rounded-sm transition-all ${
-                        form.sizes.includes(size)
-                          ? "bg-[#111] text-white border-[#111]"
-                          : "border-[#E0DED8] text-[#888] hover:border-[#111]"
-                      }`}>
+                      className={`font-dm text-sm font-semibold px-4 py-2 border rounded-sm transition-all ${form.sizes.includes(size) ? "bg-[#111] text-white border-[#111]" : "border-[#E0DED8] text-[#888] hover:border-[#111]"}`}>
                       {size}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Stock por talle */}
               {form.sizes.length > 0 && (
                 <div>
                   <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-2">Stock por talle</label>
@@ -314,16 +246,9 @@ export default function AdminProductsPage() {
                     {form.sizes.map(size => (
                       <div key={size}>
                         <label className="font-dm text-xs text-[#888] block mb-1 text-center">{size}</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={form.stockBySize[size] ?? 0}
-                          onChange={e => setForm(prev => ({
-                            ...prev,
-                            stockBySize: { ...prev.stockBySize, [size]: Number(e.target.value) }
-                          }))}
-                          className="w-full border border-[#E0DED8] px-3 py-2 font-dm text-sm text-center text-[#111] focus:outline-none focus:border-[#111] rounded-sm"
-                        />
+                        <input type="number" min="0" value={form.stockBySize[size] ?? 0}
+                          onChange={e => setForm(prev => ({ ...prev, stockBySize: { ...prev.stockBySize, [size]: Number(e.target.value) } }))}
+                          className="w-full border border-[#E0DED8] px-3 py-2 font-dm text-sm text-center text-[#111] focus:outline-none focus:border-[#111] rounded-sm" />
                       </div>
                     ))}
                   </div>
@@ -332,16 +257,11 @@ export default function AdminProductsPage() {
             </div>
 
             <div className="px-5 py-4 border-t border-[#E0DED8] sticky bottom-0 bg-white flex gap-2">
-              <button onClick={() => setShowForm(false)}
-                className="flex-1 border border-[#E0DED8] text-[#888] font-dm font-semibold text-xs uppercase tracking-widest py-3.5 rounded-sm hover:border-[#111] transition-colors">
-                Cancelar
-              </button>
-              <button onClick={handleSave} disabled={saving}
-                className="flex-[2] bg-[#111] text-white font-dm font-semibold text-xs uppercase tracking-widest py-3.5 rounded-sm hover:bg-[#333] transition-colors disabled:opacity-50">
+              <button onClick={() => setShowForm(false)} className="flex-1 border border-[#E0DED8] text-[#888] font-dm font-semibold text-xs uppercase tracking-widest py-3.5 rounded-sm hover:border-[#111] transition-colors">Cancelar</button>
+              <button onClick={handleSave} disabled={saving} className="flex-[2] bg-[#111] text-white font-dm font-semibold text-xs uppercase tracking-widest py-3.5 rounded-sm hover:bg-[#333] transition-colors disabled:opacity-50">
                 {saving ? "Guardando..." : editing ? "Guardar cambios" : "Crear producto"}
               </button>
             </div>
-
           </div>
         </>
       )}
