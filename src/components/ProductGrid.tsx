@@ -289,7 +289,7 @@ export default function ProductGrid({ productList }: ProductGridProps) {
                   )}
                 </div>
                 <div className="p-3 flex flex-col flex-1">
-                  <span className="text-[10px] font-dm text-[#E63A2E] uppercase tracking-wider font-semibold mb-0.5">
+                  <span className="text-[9px] font-dm text-[#999] uppercase tracking-wider font-semibold mb-0.5">
                     {product.category ?? "Producto"}
                   </span>
                   <h2 className="font-dm font-semibold text-sm text-[#111] leading-tight">{product.name}</h2>
@@ -307,9 +307,16 @@ export default function ProductGrid({ productList }: ProductGridProps) {
                       })}
                     </div>
                   )}
-                  <p className="font-dm font-bold text-sm text-[#111] mt-2">
-                    ${product.price.toLocaleString("es-AR")}
-                  </p>
+                  <div className="flex items-center justify-between mt-2">
+                    <p className="font-dm font-bold text-sm text-[#111]">
+                      ${product.price.toLocaleString("es-AR")}
+                    </p>
+                    <div className="w-7 h-7 rounded-full bg-[#111] flex items-center justify-center flex-shrink-0">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                      </svg>
+                    </div>
+                  </div>
                 </div>
               </button>
             );

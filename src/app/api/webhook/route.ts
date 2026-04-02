@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import client from "../../../lib/mercadopago";
 import dbConnect from "../../../lib/mongodb";
 import Order from "../../../model/Order";
+import Product from "../../../model/Product";
 import User from "../../../model/User";
 import { sendOrderConfirmation, sendNewOrderAdmin } from "@/lib/email";
 
@@ -59,6 +60,27 @@ function verifyMPSignature(req: Request): boolean {
   }
 }
 
+async function decreaseStock(items: { name: string; size: string; quantity: number }[]) {
+  for (const item of items) {
+    try {
+      const product = await Product.findOne({ name: item.name });
+      if (!product) {
+        console.warn(`⚠️ Producto no encontrado para descontar stock: ${item.name}`);
+        continue;
+      }
+
+      const currentStock = product.stockBySize?.get(item.size) ?? 0;
+      const newStock = Math.max(0, currentStock - item.quantity);
+      product.stockBySize.set(item.size, newStock);
+      await product.save();
+
+      console.log(`📦 Stock actualizado: ${item.name} talle ${item.size}: ${currentStock} → ${newStock}`);
+    } catch (err: any) {
+      console.error(`❌ Error al descontar stock de ${item.name}:`, err.message);
+    }
+  }
+}
+
 export async function POST(req: Request) {
   await dbConnect();
 
@@ -93,6 +115,11 @@ export async function POST(req: Request) {
         if (updatedOrder) {
           console.log(`✅ Orden ${externalReference} marcada como PAGADA.`);
 
+          // Descontar stock por cada item de la orden
+          if (updatedOrder.items?.length > 0) {
+            await decreaseStock(updatedOrder.items);
+          }
+
           // Buscar datos del usuario si tiene userId
           let userEmail: string | undefined;
           let userName: string | undefined;
@@ -113,14 +140,10 @@ export async function POST(req: Request) {
             userEmail,
           };
 
-          // Enviar emails en paralelo (no bloqueamos la respuesta si fallan)
           await Promise.allSettled([
-            // Email al comprador (solo si tenemos su email)
             userEmail
               ? sendOrderConfirmation({ to: userEmail, order: orderData })
               : Promise.resolve(),
-
-            // Email al admin siempre
             sendNewOrderAdmin({ order: orderData }),
           ]);
 
