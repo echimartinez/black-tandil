@@ -54,16 +54,17 @@ export default function NavDrawer({ isOpen, onClose }: NavDrawerProps) {
       />
 
       <div
-        className={`fixed top-0 left-0 h-full w-[76%] max-w-[500px] bg-[#111] z-50 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 h-full w-[76%] max-w-[500px] z-50 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="px-5 py-5 border-b border-[#222] flex items-center justify-between">
-          <div>
-            <p className="font-bebas text-2xl text-white tracking-tight leading-none">BLACK</p>
-            <p className="font-dm text-[10px] text-[#555] uppercase tracking-widest mt-0.5">Tandil</p>
-          </div>
-          <button onClick={onClose} className="text-[#555] hover:text-white transition-colors p-1">
+        {/* ── Header negro ── */}
+        <div className="bg-[#111] px-5 py-5 border-b border-[#222] flex items-center justify-center relative flex-shrink-0">
+          <p className="font-bebas text-2xl text-white tracking-tight leading-none">BLACK</p>
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-[#555] hover:text-white transition-colors p-1"
+          >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18"/>
               <line x1="6" y1="6" x2="18" y2="18"/>
@@ -71,11 +72,12 @@ export default function NavDrawer({ isOpen, onClose }: NavDrawerProps) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 py-3">
+        {/* ── Sección categorías — fondo blanco ── */}
+        <div className="bg-white flex-1 overflow-y-auto px-3 py-3">
           {categories.length === 0 ? (
             <div className="px-3 py-4 space-y-1">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="h-10 bg-white/5 rounded-sm animate-pulse" />
+                <div key={i} className="h-10 bg-[#F0EDE6] rounded-sm animate-pulse" />
               ))}
             </div>
           ) : (
@@ -83,16 +85,16 @@ export default function NavDrawer({ isOpen, onClose }: NavDrawerProps) {
               <div key={category.slug}>
                 <button
                   onClick={() => handleCategoryClick(category.slug)}
-                  className="w-full flex items-center justify-between px-3 py-3 rounded-sm text-left hover:bg-white/5 transition-colors"
+                  className="w-full flex items-center justify-between px-3 py-3 rounded-sm text-left hover:bg-[#F5F4F0] transition-colors"
                 >
                   <span className={`font-dm font-bold text-sm tracking-wide ${
-                    category.highlight ? "text-[#E63A2E]" : "text-white"
+                    category.highlight ? "text-[#E63A2E]" : "text-[#111]"
                   }`}>
                     {category.name}
                   </span>
                   <svg
                     width="14" height="14" viewBox="0 0 24 24" fill="none"
-                    stroke="#555" strokeWidth="2.5"
+                    stroke="#AAA" strokeWidth="2.5"
                     className={`transition-transform duration-200 flex-shrink-0 ${
                       expandedCategory === category.slug ? "rotate-180" : ""
                     }`}
@@ -109,24 +111,28 @@ export default function NavDrawer({ isOpen, onClose }: NavDrawerProps) {
                       <button
                         key={sub.slug}
                         onClick={() => handleSubcategoryClick(sub.slug)}
-                        className="w-full flex items-center justify-between px-6 py-2.5 text-left hover:bg-white/5 transition-colors group rounded-sm"
+                        className="w-full flex items-center justify-between px-6 py-2.5 text-left hover:bg-[#F5F4F0] transition-colors group rounded-sm"
                       >
-                        <span className="font-dm text-sm text-[#888] group-hover:text-white transition-colors">
+                        <span className="font-dm text-sm text-[#888] group-hover:text-[#111] transition-colors">
                           {sub.name}
                         </span>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="2">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#CCC" strokeWidth="2">
                           <polyline points="9 18 15 12 9 6"/>
                         </svg>
                       </button>
                     ))}
                   </div>
                 </div>
+
+                {/* Separador entre categorías */}
+                <div className="mx-3 h-px bg-[#F0EDE6]" />
               </div>
             ))
           )}
         </div>
 
-        <div className="border-t border-[#222] px-3 py-4 space-y-0.5">
+        {/* ── Footer negro — sin cambios ── */}
+        <div className="bg-[#111] border-t border-[#222] px-3 py-4 space-y-0.5 flex-shrink-0">
           <Link href="/perfil" onClick={onClose}
             className="flex items-center gap-3 px-3 py-2.5 text-[#888] hover:text-white font-dm text-sm transition-colors rounded-sm hover:bg-white/5">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
