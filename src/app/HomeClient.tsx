@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Product } from "@/types";
+import ProductCard from "@/components/ProductCard";
 
 interface HomeData {
   featured: Product[];
@@ -11,57 +12,6 @@ interface HomeData {
   newest: Product[];
 }
 
-function ProductCard({ product }: { product: Product }) {
-  const router = useRouter();
-  const discount = product.originalPrice
-    ? Math.round((1 - product.price / product.originalPrice) * 100)
-    : null;
-
-  return (
-    <button
-      onClick={() => router.push(`/producto/${product.id}`)}
-      className="flex-shrink-0 w-44 text-left group"
-    >
-      <div className="relative w-full aspect-square bg-[#ECEAE4] rounded-sm overflow-hidden">
-        <Image
-          src={product.image}
-          alt={product.name}
-          fill
-          sizes="176px"
-          className="object-cover group-hover:scale-105 transition-transform duration-500"
-        />
-        {discount && (
-          <span className="absolute top-2 left-2 bg-[#E63A2E] text-white font-dm text-[10px] font-bold px-2 py-0.5 rounded-full">
-            -{discount}%
-          </span>
-        )}
-        {product.isNew && !discount && (
-          <span className="absolute top-2 left-2 bg-[#111] text-white font-dm text-[10px] font-bold px-2 py-0.5 rounded-full">
-            NUEVO
-          </span>
-        )}
-      </div>
-      <div className="mt-2 px-0.5">
-        <p className="font-dm text-[10px] text-[#E63A2E] uppercase tracking-wider font-semibold">
-          {product.category}
-        </p>
-        <p className="font-dm font-semibold text-xs text-[#111] leading-tight mt-0.5 line-clamp-2">
-          {product.name}
-        </p>
-        <div className="flex items-center gap-2 mt-1">
-          <p className="font-dm font-bold text-sm text-[#111]">
-            ${product.price.toLocaleString("es-AR")}
-          </p>
-          {product.originalPrice && (
-            <p className="font-dm text-xs text-[#AAA] line-through">
-              ${product.originalPrice.toLocaleString("es-AR")}
-            </p>
-          )}
-        </div>
-      </div>
-    </button>
-  );
-}
 
 function Section({
   title,
@@ -102,7 +52,7 @@ function Section({
         )}
       </div>
       <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-none">
-        {products.map(p => <ProductCard key={String(p.id)} product={p} />)}
+        {products.map((p, i) => <ProductCard key={String(p._id ?? p.id)} product={p} index={i} variant="scroll" />)}
       </div>
     </div>
   );

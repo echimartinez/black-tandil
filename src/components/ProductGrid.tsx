@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import Image from "next/image";
+import ProductCard from "@/components/ProductCard";
 import { useRouter } from "next/navigation";
 import { Product } from "@/types";
 
@@ -261,66 +261,14 @@ export default function ProductGrid({ productList }: ProductGridProps) {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-[1px] bg-[#E0DED8] mt-[1px]">
-          {displayProducts.map((product, index) => {
-            const totalStock = product.stockBySize
-              ? Object.values(product.stockBySize).reduce((a, b) => a + b, 0)
-              : (product.stock ?? 0);
-            const sinStock = totalStock === 0;
-
-            return (
-              <button key={product.id} onClick={() => router.push(`/producto/${product.id}`)}
-                className="bg-[#F5F4F0] flex flex-col text-left w-full hover:bg-[#ECEAE4] transition-colors">
-                <div className="relative w-full aspect-square bg-[#ECEAE4] overflow-hidden">
-                  <Image
-                    src={product.image}
-                    alt={product.name}
-                    fill
-                    sizes="50vw"
-                    priority={index === 0}
-                    loading={index === 0 ? "eager" : "lazy"}
-                    className={`object-cover hover:scale-105 transition-transform duration-500 ${sinStock ? "opacity-50" : ""}`}
-                  />
-                  {sinStock && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="bg-white/80 font-dm text-[10px] font-bold uppercase tracking-wider text-[#888] px-2.5 py-1 rounded-full">
-                        Sin stock
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div className="p-3 flex flex-col flex-1">
-                  <span className="text-[9px] font-dm text-[#999] uppercase tracking-wider font-semibold mb-0.5">
-                    {product.category ?? "Producto"}
-                  </span>
-                  <h2 className="font-dm font-semibold text-sm text-[#111] leading-tight">{product.name}</h2>
-                  {product.sizes && product.sizes.length > 0 && (
-                    <div className="flex gap-1 flex-wrap mt-1.5">
-                      {product.sizes.map(s => {
-                        const enStock = hasStockInSize(product, s);
-                        return (
-                          <span key={s} className={`font-dm text-[9px] font-semibold px-1.5 py-0.5 rounded border ${
-                            enStock ? "border-[#CCC] text-[#444]" : "border-[#E8E6E0] text-[#CCC] line-through"
-                          }`}>
-                            {s}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between mt-2">
-                    <p className="font-dm font-bold text-sm text-[#111]">
-                      ${product.price.toLocaleString("es-AR")}
-                    </p>
-                    <div className="w-7 h-7 rounded-full bg-[#111] flex items-center justify-center flex-shrink-0">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M5 12h14M12 5l7 7-7 7"/>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+          {displayProducts.map((product, index) => (
+            <ProductCard
+              key={String(product._id ?? product.id)}
+              product={product}
+              index={index}
+              variant="grid"
+            />
+          ))}
         </div>
       )}
 

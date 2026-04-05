@@ -12,7 +12,11 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'lh3.googleusercontent.com', // fotos de perfil de Google
+        hostname: 'lh3.googleusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
       },
     ],
   },
@@ -20,9 +24,9 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: "/_next/:path*",
+        source: '/_next/:path*',
         headers: [
-          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
         ],
       },
     ];

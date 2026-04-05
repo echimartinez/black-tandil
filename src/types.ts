@@ -1,5 +1,6 @@
 export interface Product {
-  id: number | string;
+  _id?: string;        // MongoDB ID (cuando viene de la DB)
+  id: number | string; // ID estático (cuando viene de products.ts)
   name: string;
   price: number;
   originalPrice?: number;
