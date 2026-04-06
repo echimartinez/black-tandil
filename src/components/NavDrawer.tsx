@@ -58,19 +58,19 @@ export default function NavDrawer({ isOpen, onClose }: NavDrawerProps) {
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Header negro — misma altura que el header principal */}
-        <div className="bg-[#111] px-4 py-3 border-b border-[#222] flex items-center justify-between flex-shrink-0">
-          <p className="font-bebas text-4xl text-white tracking-tight leading-none translate-y-[3px]">BLACK</p>
-          <button
-            onClick={onClose}
-            className="text-[#555] hover:text-white transition-colors p-1"
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
+      {/* Header negro — altura = banner (py-2) + header principal (py-3) */}
+      <div className="bg-[#111] px-4 pt-5 pb-3 border-b border-[#222] flex items-center justify-between flex-shrink-0">
+        <p className="font-bebas text-4xl text-white tracking-tight leading-none translate-y-[3px]">BLACK</p>
+        <button
+          onClick={onClose}
+          className="text-[#555] hover:text-white transition-colors p-1"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
 
         {/* Categorías — fondo blanco */}
         <div className="bg-white flex-1 overflow-y-auto px-3 py-3">
