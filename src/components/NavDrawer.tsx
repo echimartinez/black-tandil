@@ -58,21 +58,21 @@ export default function NavDrawer({ isOpen, onClose }: NavDrawerProps) {
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* ── Header negro ── */}
-        <div className="bg-[#111] px-5 py-5 border-b border-[#222] flex items-center justify-center relative flex-shrink-0">
-          <p className="font-bebas text-2xl text-white tracking-tight leading-none">BLACK</p>
+        {/* Header negro — misma altura que el header principal */}
+        <div className="bg-[#111] px-4 py-3 border-b border-[#222] flex items-center justify-between flex-shrink-0">
+          <p className="font-bebas text-4xl text-white tracking-tight leading-none translate-y-[3px]">BLACK</p>
           <button
             onClick={onClose}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-[#555] hover:text-white transition-colors p-1"
+            className="text-[#555] hover:text-white transition-colors p-1"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <line x1="18" y1="6" x2="6" y2="18"/>
               <line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
           </button>
         </div>
 
-        {/* ── Sección categorías — fondo blanco ── */}
+        {/* Categorías — fondo blanco */}
         <div className="bg-white flex-1 overflow-y-auto px-3 py-3">
           {categories.length === 0 ? (
             <div className="px-3 py-4 space-y-1">
@@ -124,14 +124,13 @@ export default function NavDrawer({ isOpen, onClose }: NavDrawerProps) {
                   </div>
                 </div>
 
-                {/* Separador entre categorías */}
                 <div className="mx-3 h-px bg-[#F0EDE6]" />
               </div>
             ))
           )}
         </div>
 
-        {/* ── Footer negro — sin cambios ── */}
+        {/* Footer negro */}
         <div className="bg-[#111] border-t border-[#222] px-3 py-4 space-y-0.5 flex-shrink-0">
           <Link href="/perfil" onClick={onClose}
             className="flex items-center gap-3 px-3 py-2.5 text-[#888] hover:text-white font-dm text-sm transition-colors rounded-sm hover:bg-white/5">
