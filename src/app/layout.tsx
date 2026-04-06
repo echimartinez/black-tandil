@@ -75,9 +75,7 @@ export default function RootLayout({
         <AuthProvider>
           <SplashScreen /> 
           <CartProvider>
-            <div className="bg-[#111] text-white text-center text-xs tracking-widest py-2 font-dm uppercase px-4 truncate">
-              ¡Envíos a todo el país!
-            </div>
+
             <Header />
             <main className="flex-1 w-full">
               {children}
