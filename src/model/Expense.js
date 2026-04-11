@@ -18,13 +18,16 @@ const ExpenseSchema = new mongoose.Schema({
   // Solo para costos de producción
   productName: { type: String, default: '' },
   costBreakdown: {
-    material: { type: Number, default: 0 },
-    estampado: { type: Number, default: 0 },
-    confeccion: { type: Number, default: 0 },
-    etiqueta: { type: Number, default: 0 },
-    packaging: { type: Number, default: 0 },
-    otros: { type: Number, default: 0 },
+    costoLocal: { type: Number, default: 0 },
+    packaging:  { type: Number, default: 0 },
   },
+  // Campos personalizados que agrega el usuario
+  customFields: [
+    {
+      label: { type: String, default: '' },
+      value: { type: Number, default: 0 },
+    }
+  ],
   date: { type: Date, default: Date.now },
   notes: { type: String, default: '' },
   active: { type: Boolean, default: true },

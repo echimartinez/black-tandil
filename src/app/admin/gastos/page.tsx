@@ -24,7 +24,8 @@ const EMPTY_PROD = {
   category: "",
   description: "",
   productName: "",
-  costBreakdown: { material: "", estampado: "", confeccion: "", etiqueta: "", packaging: "", otros: "" },
+  costBreakdown: { costoLocal: "", packaging: "" },
+  customFields: [] as { label: string; value: string }[],
   amount: 0,
   notes: "",
 };
@@ -87,19 +88,19 @@ export default function AdminGastosPage() {
       setFormProd({
         type: e.type, category: e.category, description: e.description,
         productName: e.productName || "",
-        costBreakdown: {
-          material: cb.material || "", estampado: cb.estampado || "",
-          confeccion: cb.confeccion || "", etiqueta: cb.etiqueta || "",
-          packaging: cb.packaging || "", otros: cb.otros || "",
-        },
+        costBreakdown: { costoLocal: cb.costoLocal || "", packaging: cb.packaging || "" },
+        customFields: e.customFields || [],
         amount: e.amount, notes: e.notes || "",
       });
     }
     setShowForm(true);
   };
 
-  const calcTotalProd = (cb: any) =>
-    Object.values(cb).reduce((acc: number, v: any) => acc + (Number(v) || 0), 0);
+  const calcTotalProd = (cb: any, custom: { label: string; value: string }[] = []) => {
+    const base = (Number(cb.costoLocal) || 0) + (Number(cb.packaging) || 0);
+    const extra = custom.reduce((acc, f) => acc + (Number(f.value) || 0), 0);
+    return base + extra;
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -110,18 +111,16 @@ export default function AdminGastosPage() {
     } else {
       if (!formProd.productName) { alert("Completá el nombre del producto."); setSaving(false); return; }
       const cb = formProd.costBreakdown;
-      const total = calcTotalProd(cb);
+      const customTotal = (formProd.customFields as { label: string; value: string }[]).reduce((acc, f) => acc + (Number(f.value) || 0), 0);
+      const total = (Number(cb.costoLocal) || 0) + (Number(cb.packaging) || 0) + customTotal;
       body = {
         ...formProd,
         amount: total,
         costBreakdown: {
-          material: Number(cb.material) || 0,
-          estampado: Number(cb.estampado) || 0,
-          confeccion: Number(cb.confeccion) || 0,
-          etiqueta: Number(cb.etiqueta) || 0,
+          costoLocal: Number(cb.costoLocal) || 0,
           packaging: Number(cb.packaging) || 0,
-          otros: Number(cb.otros) || 0,
         },
+        customFields: (formProd.customFields as { label: string; value: string }[]).map(f => ({ label: f.label, value: Number(f.value) || 0 })),
       };
     }
     if (editing) {
@@ -401,34 +400,66 @@ export default function AdminGastosPage() {
                       className="w-full border border-[#E0DED8] px-4 py-3 font-dm text-sm text-[#111] placeholder-[#CCC] focus:outline-none focus:border-[#111] rounded-sm" />
                   </div>
                   <div>
-                    <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-2">Desglose de costos (ARS)</label>
+                    <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-2">Costos (ARS)</label>
                     <div className="space-y-2">
-                      {[
-                        { key: "material", label: "Tela / Material" },
-                        { key: "estampado", label: "Estampado / Serigrafía" },
-                        { key: "confeccion", label: "Confección" },
-                        { key: "etiqueta", label: "Etiqueta / Tag" },
-                        { key: "packaging", label: "Packaging / Bolsa" },
-                        { key: "otros", label: "Otros" },
-                      ].map(({ key, label }) => (
-                        <div key={key} className="flex items-center gap-3">
-                          <label className="font-dm text-sm text-[#666] w-40 shrink-0">{label}</label>
-                          <input type="number" min="0" value={formProd.costBreakdown[key]}
-                            onChange={e => setFormProd((p: any) => ({ ...p, costBreakdown: { ...p.costBreakdown, [key]: e.target.value } }))}
+                      {/* Precio costo local — fijo */}
+                      <div className="flex items-center gap-3">
+                        <label className="font-dm text-sm text-[#666] w-40 shrink-0">Precio costo local</label>
+                        <input type="number" min="0" value={formProd.costBreakdown.costoLocal}
+                          onChange={e => setFormProd((p: any) => ({ ...p, costBreakdown: { ...p.costBreakdown, costoLocal: e.target.value } }))}
+                          placeholder="0"
+                          className="flex-1 border border-[#E0DED8] px-3 py-2.5 font-dm text-sm text-[#111] focus:outline-none focus:border-[#111] rounded-sm" />
+                      </div>
+                      {/* Packaging — fijo */}
+                      <div className="flex items-center gap-3">
+                        <label className="font-dm text-sm text-[#666] w-40 shrink-0">Packaging / Bolsa</label>
+                        <input type="number" min="0" value={formProd.costBreakdown.packaging}
+                          onChange={e => setFormProd((p: any) => ({ ...p, costBreakdown: { ...p.costBreakdown, packaging: e.target.value } }))}
+                          placeholder="0"
+                          className="flex-1 border border-[#E0DED8] px-3 py-2.5 font-dm text-sm text-[#111] focus:outline-none focus:border-[#111] rounded-sm" />
+                      </div>
+                      {/* Campos personalizados */}
+                      {(formProd.customFields as { label: string; value: string }[]).map((field, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <input type="text" value={field.label}
+                            onChange={e => setFormProd((p: any) => {
+                              const cf = [...p.customFields];
+                              cf[idx] = { ...cf[idx], label: e.target.value };
+                              return { ...p, customFields: cf };
+                            })}
+                            placeholder="Nombre del costo"
+                            className="w-36 shrink-0 border border-[#E0DED8] px-3 py-2.5 font-dm text-sm text-[#111] placeholder-[#CCC] focus:outline-none focus:border-[#111] rounded-sm" />
+                          <input type="number" min="0" value={field.value}
+                            onChange={e => setFormProd((p: any) => {
+                              const cf = [...p.customFields];
+                              cf[idx] = { ...cf[idx], value: e.target.value };
+                              return { ...p, customFields: cf };
+                            })}
                             placeholder="0"
                             className="flex-1 border border-[#E0DED8] px-3 py-2.5 font-dm text-sm text-[#111] focus:outline-none focus:border-[#111] rounded-sm" />
+                          <button type="button" onClick={() => setFormProd((p: any) => ({ ...p, customFields: p.customFields.filter((_: any, i: number) => i !== idx) }))}
+                            className="text-[#CCC] hover:text-[#E63A2E] transition-colors p-1 shrink-0">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                          </button>
                         </div>
                       ))}
+                      {/* Botón agregar campo */}
+                      <button type="button"
+                        onClick={() => setFormProd((p: any) => ({ ...p, customFields: [...p.customFields, { label: "", value: "" }] }))}
+                        className="flex items-center gap-1.5 font-dm text-xs text-[#888] hover:text-[#111] transition-colors mt-1">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                        Agregar otro costo
+                      </button>
                     </div>
-                    {calcTotalProd(formProd.costBreakdown) > 0 && (
+                    {calcTotalProd(formProd.costBreakdown, formProd.customFields) > 0 && (
                       <div className="mt-3 bg-[#F5F4F0] rounded-sm p-3 space-y-1">
                         <div className="flex justify-between">
                           <span className="font-dm text-xs font-bold text-[#111] uppercase tracking-wider">Costo total</span>
-                          <span className="font-dm text-sm font-bold text-[#E63A2E]">{fmt(calcTotalProd(formProd.costBreakdown))}</span>
+                          <span className="font-dm text-sm font-bold text-[#E63A2E]">{fmt(calcTotalProd(formProd.costBreakdown, formProd.customFields))}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="font-dm text-xs text-[#888]">Precio sugerido (×2.5)</span>
-                          <span className="font-dm text-sm font-bold text-[#2A7D4F]">{fmt(calcTotalProd(formProd.costBreakdown) * 2.5)}</span>
+                          <span className="font-dm text-sm font-bold text-[#2A7D4F]">{fmt(calcTotalProd(formProd.costBreakdown, formProd.customFields) * 2.5)}</span>
                         </div>
                       </div>
                     )}
@@ -455,3 +486,4 @@ export default function AdminGastosPage() {
     </div>
   );
 }
+
