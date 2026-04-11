@@ -1,13 +1,13 @@
 import mongoose from 'mongoose';
-
+ 
 const ExpenseSchema = new mongoose.Schema({
   type: {
     type: String,
     enum: ['gasto_fijo', 'costo_produccion'],
     required: true,
   },
-  category: { type: String, required: true },
-  description: { type: String, required: true },
+  category: { type: String, default: '' },
+  description: { type: String, default: '' },
   amount: { type: Number, required: true },
   // Solo para gastos fijos
   frequency: {
@@ -21,7 +21,6 @@ const ExpenseSchema = new mongoose.Schema({
     costoLocal: { type: Number, default: 0 },
     packaging:  { type: Number, default: 0 },
   },
-  // Campos personalizados que agrega el usuario
   customFields: [
     {
       label: { type: String, default: '' },
@@ -33,5 +32,7 @@ const ExpenseSchema = new mongoose.Schema({
   active: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
 });
-
+ 
 export default mongoose.models.Expense || mongoose.model('Expense', ExpenseSchema);
+ 
+

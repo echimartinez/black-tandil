@@ -1,140 +1,495 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 
-interface Stats {
-  totalOrders: number;
-  approvedOrders: number;
-  pendingOrders: number;
-  totalRevenue: number;
-  totalUsers: number;
-  recentOrders: any[];
-  salesByDay: { _id: string; total: number; count: number }[];
-  monthlyExpenses: number;
-}
+const CATEGORIAS_FIJOS = [
+  "Envíos", "Marketing", "Plataforma / Web", "Insumos", "Servicios", "Transporte", "Otros",
+];
+const CATEGORIAS_PROD = [
+  "Remera", "Buzo", "Pantalón", "Camiseta Fútbol", "Short Básket", "Short Fútbol",
+];
+const FRECUENCIAS = ["mensual", "trimestral", "semestral", "anual"];
+const FREQ_MULT: Record<string, number> = { mensual: 12, trimestral: 4, semestral: 2, anual: 1 };
 
-export default function AdminDashboard() {
-  const [stats, setStats] = useState<Stats | null>(null);
+const EMPTY_FIJO = {
+  type: "gasto_fijo",
+  category: "",
+  description: "",
+  amount: "",
+  frequency: "mensual",
+  notes: "",
+};
+const EMPTY_PROD = {
+  type: "costo_produccion",
+  category: "",
+  description: "",
+  productName: "",
+  costBreakdown: { costoLocal: "", packaging: "" },
+  customFields: [] as { label: string; value: string }[],
+  amount: 0,
+  notes: "",
+};
+
+export default function AdminGastosPage() {
+  const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<"gastos_fijos" | "costos_prod">("gastos_fijos");
+  const [showForm, setShowForm] = useState(false);
+  const [formType, setFormType] = useState<"gasto_fijo" | "costo_produccion">("gasto_fijo");
+  const [editing, setEditing] = useState<any | null>(null);
+  const [formFijo, setFormFijo] = useState<any>(EMPTY_FIJO);
+  const [formProd, setFormProd] = useState<any>(EMPTY_PROD);
+  const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetch("/api/admin/stats")
+  const load = () => {
+    setLoading(true);
+    fetch("/api/admin/expenses")
       .then(r => r.json())
-      .then(data => { setStats(data); setLoading(false); });
-  }, []);
+      .then(data => { setExpenses(Array.isArray(data) ? data : []); setLoading(false); });
+  };
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="w-6 h-6 border-2 border-[#111] border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
+  useEffect(() => { load(); }, []);
 
-  if (!stats) return null;
+  const gastosFijos = expenses.filter(e => e.type === "gasto_fijo");
+  const costosProd = expenses.filter(e => e.type === "costo_produccion");
 
-  const cards = [
-    { label: "Ingresos totales", value: `$${stats.totalRevenue.toLocaleString("es-AR")}`, color: "text-[#111]", icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
-    { label: "Órdenes aprobadas", value: stats.approvedOrders, color: "text-green-600", icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" },
-    { label: "Órdenes pendientes", value: stats.pendingOrders, color: "text-yellow-600", icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
-    { label: "Gastos fijos / mes", value: `$${Math.round(stats.monthlyExpenses).toLocaleString("es-AR")}`, color: "text-[#E63A2E]", icon: "M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" },
-    { label: "Usuarios registrados", value: stats.totalUsers, color: "text-blue-600", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" },
-  ];
+  const totalMensual = gastosFijos.reduce((acc, e) => acc + (e.amount / (FREQ_MULT[e.frequency] || 12) * 1), 0);
+  // Actually monthly = amount * freq_per_year / 12 if stored as per-period amount
+  const totalMensualFixed = gastosFijos.reduce((acc, e) => {
+    const perMonth = e.frequency === "mensual" ? e.amount
+      : e.frequency === "trimestral" ? e.amount / 3
+      : e.frequency === "semestral" ? e.amount / 6
+      : e.amount / 12;
+    return acc + perMonth;
+  }, 0);
+  const totalAnual = gastosFijos.reduce((acc, e) => {
+    const perYear = e.frequency === "mensual" ? e.amount * 12
+      : e.frequency === "trimestral" ? e.amount * 4
+      : e.frequency === "semestral" ? e.amount * 2
+      : e.amount;
+    return acc + perYear;
+  }, 0);
 
-  // Calcular el max para la barra del gráfico
-  const maxSales = Math.max(...(stats.salesByDay.map(d => d.total)), 1);
+  const openCreateFijo = () => {
+    setEditing(null); setFormFijo(EMPTY_FIJO); setFormType("gasto_fijo"); setShowForm(true);
+  };
+  const openCreateProd = () => {
+    setEditing(null); setFormProd(EMPTY_PROD); setFormType("costo_produccion"); setShowForm(true);
+  };
+  const openEdit = (e: any) => {
+    setEditing(e);
+    setFormType(e.type);
+    if (e.type === "gasto_fijo") {
+      setFormFijo({ type: e.type, category: e.category, description: e.description, amount: String(e.amount), frequency: e.frequency, notes: e.notes || "" });
+    } else {
+      const cb = e.costBreakdown || {};
+      setFormProd({
+        type: e.type, category: e.category, description: e.description,
+        productName: e.productName || "",
+        costBreakdown: { costoLocal: cb.costoLocal || "", packaging: cb.packaging || "" },
+        customFields: e.customFields || [],
+        amount: e.amount, notes: e.notes || "",
+      });
+    }
+    setShowForm(true);
+  };
+
+  const calcTotalProd = (cb: any, custom: { label: string; value: string }[] = []) => {
+    const base = (Number(cb.costoLocal) || 0) + (Number(cb.packaging) || 0);
+    const extra = custom.reduce((acc, f) => acc + (Number(f.value) || 0), 0);
+    return base + extra;
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    let body: any;
+    if (formType === "gasto_fijo") {
+      if (!formFijo.description || !formFijo.amount) { alert("Completá descripción y monto."); setSaving(false); return; }
+      body = { ...formFijo, amount: Number(formFijo.amount) };
+    } else {
+      if (!formProd.productName) { alert("Completá el nombre del producto."); setSaving(false); return; }
+      const cb = formProd.costBreakdown;
+      const customTotal = (formProd.customFields as { label: string; value: string }[]).reduce((acc, f) => acc + (Number(f.value) || 0), 0);
+      const total = (Number(cb.costoLocal) || 0) + (Number(cb.packaging) || 0) + customTotal;
+      body = {
+        ...formProd,
+        amount: total || 0,
+        costBreakdown: {
+          costoLocal: Number(cb.costoLocal) || 0,
+          packaging: Number(cb.packaging) || 0,
+        },
+        customFields: (formProd.customFields as { label: string; value: string }[]).map(f => ({ label: f.label, value: Number(f.value) || 0 })),
+      };
+    }
+    try {
+      const res = await fetch("/api/admin/expenses", {
+        method: editing ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editing ? { id: editing._id, ...body } : body),
+      });
+      const data = await res.json();
+      if (!res.ok) { alert("Error al guardar: " + (data.error || res.status)); setSaving(false); return; }
+      setShowForm(false); load();
+    } catch (e: any) {
+      alert("Error de red: " + e.message);
+    }
+    setSaving(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    await fetch("/api/admin/expenses", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    setDeletingId(null); setConfirmDelete(null); load();
+  };
+
+  const fmt = (n: number) => `$${Math.round(n).toLocaleString("es-AR")}`;
 
   return (
-    <div className="space-y-6">
-
-      <div>
-        <h1 className="font-bebas text-4xl tracking-tight text-[#111]">DASHBOARD</h1>
-        <p className="font-dm text-sm text-[#888] mt-0.5">Resumen general de la tienda</p>
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="font-bebas text-4xl tracking-tight text-[#111]">GASTOS Y COSTOS</h1>
+          <p className="font-dm text-sm text-[#888] mt-0.5">Gastos fijos del negocio y costos de producción</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={openCreateFijo} className="flex items-center gap-2 bg-[#111] text-white font-dm font-semibold text-xs uppercase tracking-widest px-4 py-2.5 rounded-sm hover:bg-[#333] transition-colors">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            Gasto fijo
+          </button>
+          <button onClick={openCreateProd} className="flex items-center gap-2 border border-[#111] text-[#111] font-dm font-semibold text-xs uppercase tracking-widest px-4 py-2.5 rounded-sm hover:bg-[#111] hover:text-white transition-colors">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            Costo producción
+          </button>
+        </div>
       </div>
 
-      {/* Cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        {cards.map(card => (
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: "Gastos fijos / mes", value: fmt(totalMensualFixed), color: "text-[#E63A2E]" },
+          { label: "Gastos fijos / año", value: fmt(totalAnual), color: "text-[#111]" },
+          { label: "Productos costeados", value: String(costosProd.length), color: "text-[#2A7D4F]" },
+          { label: "Costo prom. por producto", value: costosProd.length ? fmt(costosProd.reduce((a, e) => a + e.amount, 0) / costosProd.length) : "$0", color: "text-[#111]" },
+        ].map(card => (
           <div key={card.label} className="bg-white border border-[#E0DED8] rounded-sm p-4">
-            <div className="flex items-start justify-between mb-3">
-              <p className="font-dm text-xs text-[#888] uppercase tracking-wider">{card.label}</p>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#CCC" strokeWidth="1.5">
-                <path d={card.icon}/>
-              </svg>
-            </div>
+            <p className="font-dm text-xs text-[#888] uppercase tracking-wider mb-2">{card.label}</p>
             <p className={`font-bebas text-3xl tracking-tight ${card.color}`}>{card.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {/* Tabs */}
+      <div className="flex border-b border-[#E0DED8]">
+        {(["gastos_fijos", "costos_prod"] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className={`font-dm text-sm font-semibold px-5 py-3 border-b-2 transition-colors ${tab === t ? "border-[#111] text-[#111]" : "border-transparent text-[#888] hover:text-[#111]"}`}>
+            {t === "gastos_fijos" ? `Gastos Fijos (${gastosFijos.length})` : `Costos de Producción (${costosProd.length})`}
+          </button>
+        ))}
+      </div>
 
-        {/* Ventas últimos 7 días */}
-        <div className="bg-white border border-[#E0DED8] rounded-sm p-5">
-          <h2 className="font-dm text-sm font-semibold text-[#111] mb-4">Ventas últimos 7 días</h2>
-          {stats.salesByDay.length === 0 ? (
-            <p className="font-dm text-sm text-[#888] text-center py-8">Sin ventas en este período</p>
-          ) : (
-            <div className="flex items-end gap-2 h-32">
-              {stats.salesByDay.map(day => {
-                const height = Math.round((day.total / maxSales) * 100);
-                const date = new Date(day._id + "T00:00:00");
-                const label = date.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
-                return (
-                  <div key={day._id} className="flex-1 flex flex-col items-center gap-1 group">
-                    <div className="relative w-full">
-                      <div
-                        className="w-full bg-[#111] rounded-t-sm transition-all group-hover:bg-[#E63A2E]"
-                        style={{ height: `${Math.max(height, 4)}px` }}
-                      />
-                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-[#111] text-white font-dm text-[9px] px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                        ${day.total.toLocaleString("es-AR")}
+      {loading ? (
+        <div className="flex justify-center py-16"><div className="w-6 h-6 border-2 border-[#111] border-t-transparent rounded-full animate-spin" /></div>
+      ) : tab === "gastos_fijos" ? (
+        gastosFijos.length === 0 ? (
+          <div className="text-center py-16 bg-white border border-[#E0DED8] rounded-sm">
+            <p className="font-bebas text-2xl text-[#CCC] mb-2">SIN GASTOS FIJOS</p>
+            <p className="font-dm text-sm text-[#888] mb-4">Registrá los gastos fijos del negocio.</p>
+            <button onClick={openCreateFijo} className="font-dm text-xs font-semibold uppercase tracking-widest px-6 py-3 bg-[#111] text-white rounded-sm hover:bg-[#333] transition-colors">Agregar gasto</button>
+          </div>
+        ) : (
+          <div className="bg-white border border-[#E0DED8] rounded-sm overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-[#E0DED8]">
+                  {["Categoría", "Descripción", "Frecuencia", "Monto", "Mensual equiv.", ""].map(h => (
+                    <th key={h} className="text-left font-dm text-xs text-[#888] uppercase tracking-wider px-4 py-3">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#F5F4F0]">
+                {gastosFijos.map(e => {
+                  const perMonth = e.frequency === "mensual" ? e.amount
+                    : e.frequency === "trimestral" ? e.amount / 3
+                    : e.frequency === "semestral" ? e.amount / 6
+                    : e.amount / 12;
+                  return (
+                    <tr key={e._id} className="hover:bg-[#FAFAF8] transition-colors">
+                      <td className="px-4 py-3">
+                        <span className="font-dm text-xs font-semibold uppercase tracking-wider text-[#E63A2E]">{e.category}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="font-dm text-sm text-[#111]">{e.description}</p>
+                        {e.notes && <p className="font-dm text-xs text-[#AAA] mt-0.5">{e.notes}</p>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="font-dm text-xs capitalize text-[#666] border border-[#E0DED8] px-2 py-0.5 rounded-full">{e.frequency}</span>
+                      </td>
+                      <td className="px-4 py-3 font-dm text-sm font-bold text-[#111]">{fmt(e.amount)}</td>
+                      <td className="px-4 py-3 font-dm text-sm text-[#E63A2E] font-semibold">{fmt(perMonth)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2 justify-end">
+                          <button onClick={() => openEdit(e)} className="font-dm text-xs font-semibold uppercase tracking-wider px-3 py-1.5 border border-[#E0DED8] text-[#666] hover:border-[#111] hover:text-[#111] rounded-sm transition-colors">Editar</button>
+                          <button onClick={() => setConfirmDelete(e._id)} className="font-dm text-xs font-semibold uppercase tracking-wider px-3 py-1.5 border border-[#E63A2E] text-[#E63A2E] hover:bg-[#E63A2E] hover:text-white rounded-sm transition-colors">Borrar</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-[#111] bg-[#FAFAF8]">
+                  <td colSpan={3} className="px-4 py-3 font-dm text-xs font-bold uppercase tracking-wider text-[#888]">Total mensual estimado</td>
+                  <td className="px-4 py-3"></td>
+                  <td className="px-4 py-3 font-bebas text-xl text-[#E63A2E]">{fmt(totalMensualFixed)}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )
+      ) : (
+        costosProd.length === 0 ? (
+          <div className="text-center py-16 bg-white border border-[#E0DED8] rounded-sm">
+            <p className="font-bebas text-2xl text-[#CCC] mb-2">SIN COSTOS DE PRODUCCIÓN</p>
+            <p className="font-dm text-sm text-[#888] mb-4">Registrá cuánto te cuesta producir cada prenda.</p>
+            <button onClick={openCreateProd} className="font-dm text-xs font-semibold uppercase tracking-widest px-6 py-3 bg-[#111] text-white rounded-sm hover:bg-[#333] transition-colors">Agregar costo</button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {costosProd.map(e => {
+              const cb = e.costBreakdown || {};
+              const total = e.amount;
+              const suggested = total * 2.5;
+              const items = [
+                { label: "Material", val: cb.material },
+                { label: "Estampado", val: cb.estampado },
+                { label: "Confección", val: cb.confeccion },
+                { label: "Etiqueta", val: cb.etiqueta },
+                { label: "Packaging", val: cb.packaging },
+                { label: "Otros", val: cb.otros },
+              ].filter(i => i.val > 0);
+              return (
+                <div key={e._id} className="bg-white border border-[#E0DED8] rounded-sm p-4 space-y-3">
+                  <div>
+                    <span className="font-dm text-[10px] font-semibold uppercase tracking-wider text-[#E63A2E]">{e.category}</span>
+                    <h3 className="font-dm font-bold text-sm text-[#111] mt-0.5">{e.productName || e.description}</h3>
+                    {e.notes && <p className="font-dm text-xs text-[#AAA] mt-0.5">{e.notes}</p>}
+                  </div>
+                  {items.length > 0 && (
+                    <div className="space-y-1.5">
+                      {items.map(i => (
+                        <div key={i.label} className="flex justify-between items-center">
+                          <span className="font-dm text-xs text-[#888]">{i.label}</span>
+                          <span className="font-dm text-xs font-semibold text-[#111]">{fmt(i.val)}</span>
+                        </div>
+                      ))}
+                      <div className="border-t border-[#E0DED8] pt-1.5 flex justify-between items-center">
+                        <span className="font-dm text-xs font-bold text-[#111] uppercase tracking-wider">Costo total</span>
+                        <span className="font-dm text-sm font-bold text-[#E63A2E]">{fmt(total)}</span>
                       </div>
                     </div>
-                    <p className="font-dm text-[9px] text-[#888]">{label}</p>
+                  )}
+                  <div className="bg-[#F5F4F0] rounded-sm p-2.5 flex justify-between items-center">
+                    <span className="font-dm text-xs text-[#888]">Precio sugerido (×2.5)</span>
+                    <span className="font-dm text-sm font-bold text-[#2A7D4F]">{fmt(suggested)}</span>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Órdenes recientes */}
-        <div className="bg-white border border-[#E0DED8] rounded-sm p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-dm text-sm font-semibold text-[#111]">Órdenes recientes</h2>
-            <Link href="/admin/ordenes" className="font-dm text-xs text-[#888] hover:text-[#111] underline">
-              Ver todas
-            </Link>
-          </div>
-          {stats.recentOrders.length === 0 ? (
-            <p className="font-dm text-sm text-[#888] text-center py-8">Sin órdenes todavía</p>
-          ) : (
-            <div className="space-y-2">
-              {stats.recentOrders.map((order: any) => (
-                <div key={order._id} className="flex items-center justify-between py-2 border-b border-[#F0EDE6] last:border-0">
-                  <div className="min-w-0">
-                    <p className="font-dm text-xs font-semibold text-[#111] truncate">{order.title}</p>
-                    <p className="font-dm text-[10px] text-[#888]">
-                      {new Date(order.createdAt).toLocaleDateString("es-AR")}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                    <span className={`font-dm text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                      order.status === "approved" ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"
-                    }`}>
-                      {order.status === "approved" ? "Pagado" : "Pendiente"}
-                    </span>
-                    <p className="font-dm text-xs font-bold text-[#111]">
-                      ${order.amount.toLocaleString("es-AR")}
-                    </p>
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={() => openEdit(e)} className="flex-1 font-dm text-xs font-semibold uppercase tracking-wider py-2 border border-[#111] text-[#111] hover:bg-[#111] hover:text-white transition-colors rounded-sm">Editar</button>
+                    <button onClick={() => setConfirmDelete(e._id)} className="flex-1 font-dm text-xs font-semibold uppercase tracking-wider py-2 border border-[#E63A2E] text-[#E63A2E] hover:bg-[#E63A2E] hover:text-white transition-colors rounded-sm">Borrar</button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              );
+            })}
+          </div>
+        )
+      )}
 
-      </div>
+      {/* Confirm delete */}
+      {confirmDelete && (
+        <>
+          <div className="fixed inset-0 bg-black/50 z-50" onClick={() => setConfirmDelete(null)} />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white rounded-sm shadow-2xl p-6 w-full max-w-sm mx-4">
+            <h3 className="font-bebas text-2xl text-[#111] mb-1">ELIMINAR</h3>
+            <p className="font-dm text-sm text-[#888] mb-5">Esta acción no se puede deshacer.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setConfirmDelete(null)} className="flex-1 border border-[#E0DED8] text-[#888] font-dm font-semibold text-xs uppercase tracking-widest py-3 rounded-sm hover:border-[#111] transition-colors">Cancelar</button>
+              <button onClick={() => handleDelete(confirmDelete)} disabled={deletingId === confirmDelete} className="flex-1 bg-[#E63A2E] text-white font-dm font-semibold text-xs uppercase tracking-widest py-3 rounded-sm hover:bg-red-700 transition-colors disabled:opacity-50">
+                {deletingId === confirmDelete ? "Eliminando..." : "Eliminar"}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Form drawer */}
+      {showForm && (
+        <>
+          <div className="fixed inset-0 bg-black/50 z-50" onClick={() => setShowForm(false)} />
+          <div className="fixed top-0 right-0 h-full w-full max-w-md bg-white z-50 flex flex-col shadow-2xl overflow-y-auto">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#E0DED8] sticky top-0 bg-white">
+              <h2 className="font-bebas text-2xl tracking-tight text-[#111]">
+                {editing ? "EDITAR" : formType === "gasto_fijo" ? "NUEVO GASTO FIJO" : "NUEVO COSTO DE PRODUCCIÓN"}
+              </h2>
+              <button onClick={() => setShowForm(false)} className="text-[#888] hover:text-[#111] p-1">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+
+            <div className="px-5 py-5 space-y-4 flex-1">
+              {formType === "gasto_fijo" ? (
+                <>
+                  <div>
+                    <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">Categoría</label>
+                    <select value={formFijo.category} onChange={e => setFormFijo((p: any) => ({ ...p, category: e.target.value }))}
+                      className="w-full border border-[#E0DED8] px-4 py-3 font-dm text-sm text-[#111] focus:outline-none focus:border-[#111] rounded-sm bg-white">
+                      <option value="">Seleccioná una categoría</option>
+                      {CATEGORIAS_FIJOS.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">Descripción</label>
+                    <input type="text" value={formFijo.description} onChange={e => setFormFijo((p: any) => ({ ...p, description: e.target.value }))}
+                      placeholder="Ej: Andreani envíos"
+                      className="w-full border border-[#E0DED8] px-4 py-3 font-dm text-sm text-[#111] placeholder-[#CCC] focus:outline-none focus:border-[#111] rounded-sm" />
+                  </div>
+                  <div>
+                    <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">Frecuencia de pago</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {FRECUENCIAS.map(f => (
+                        <button key={f} type="button" onClick={() => setFormFijo((p: any) => ({ ...p, frequency: f }))}
+                          className={`font-dm text-sm capitalize py-2.5 border rounded-sm transition-all ${formFijo.frequency === f ? "bg-[#111] text-white border-[#111]" : "border-[#E0DED8] text-[#888] hover:border-[#111]"}`}>
+                          {f}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">
+                      Monto ({formFijo.frequency}) (ARS)
+                    </label>
+                    <input type="number" value={formFijo.amount} onChange={e => setFormFijo((p: any) => ({ ...p, amount: e.target.value }))}
+                      placeholder="Ej: 5000"
+                      className="w-full border border-[#E0DED8] px-4 py-3 font-dm text-sm text-[#111] placeholder-[#CCC] focus:outline-none focus:border-[#111] rounded-sm" />
+                    {formFijo.amount && (
+                      <p className="font-dm text-xs text-[#888] mt-1">
+                        ≈ {fmt((formFijo.frequency === "mensual" ? Number(formFijo.amount)
+                          : formFijo.frequency === "trimestral" ? Number(formFijo.amount) / 3
+                          : formFijo.frequency === "semestral" ? Number(formFijo.amount) / 6
+                          : Number(formFijo.amount) / 12))} / mes
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">Notas (opcional)</label>
+                    <input type="text" value={formFijo.notes} onChange={e => setFormFijo((p: any) => ({ ...p, notes: e.target.value }))}
+                      placeholder="Ej: Varía según volumen de envíos"
+                      className="w-full border border-[#E0DED8] px-4 py-3 font-dm text-sm text-[#111] placeholder-[#CCC] focus:outline-none focus:border-[#111] rounded-sm" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">Categoría de producto</label>
+                    <select value={formProd.category} onChange={e => setFormProd((p: any) => ({ ...p, category: e.target.value }))}
+                      className="w-full border border-[#E0DED8] px-4 py-3 font-dm text-sm text-[#111] focus:outline-none focus:border-[#111] rounded-sm bg-white">
+                      <option value="">Seleccioná una categoría</option>
+                      {CATEGORIAS_PROD.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">Nombre del producto</label>
+                    <input type="text" value={formProd.productName} onChange={e => setFormProd((p: any) => ({ ...p, productName: e.target.value }))}
+                      placeholder="Ej: Remera oversize negra"
+                      className="w-full border border-[#E0DED8] px-4 py-3 font-dm text-sm text-[#111] placeholder-[#CCC] focus:outline-none focus:border-[#111] rounded-sm" />
+                  </div>
+                  <div>
+                    <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-2">Costos (ARS)</label>
+                    <div className="space-y-2">
+                      {/* Precio costo local — fijo */}
+                      <div className="flex items-center gap-3">
+                        <label className="font-dm text-sm text-[#666] w-40 shrink-0">Precio costo local</label>
+                        <input type="number" min="0" value={formProd.costBreakdown.costoLocal}
+                          onChange={e => setFormProd((p: any) => ({ ...p, costBreakdown: { ...p.costBreakdown, costoLocal: e.target.value } }))}
+                          placeholder="0"
+                          className="flex-1 border border-[#E0DED8] px-3 py-2.5 font-dm text-sm text-[#111] focus:outline-none focus:border-[#111] rounded-sm" />
+                      </div>
+                      {/* Packaging — fijo */}
+                      <div className="flex items-center gap-3">
+                        <label className="font-dm text-sm text-[#666] w-40 shrink-0">Packaging / Bolsa</label>
+                        <input type="number" min="0" value={formProd.costBreakdown.packaging}
+                          onChange={e => setFormProd((p: any) => ({ ...p, costBreakdown: { ...p.costBreakdown, packaging: e.target.value } }))}
+                          placeholder="0"
+                          className="flex-1 border border-[#E0DED8] px-3 py-2.5 font-dm text-sm text-[#111] focus:outline-none focus:border-[#111] rounded-sm" />
+                      </div>
+                      {/* Campos personalizados */}
+                      {(formProd.customFields as { label: string; value: string }[]).map((field, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <input type="text" value={field.label}
+                            onChange={e => setFormProd((p: any) => {
+                              const cf = [...p.customFields];
+                              cf[idx] = { ...cf[idx], label: e.target.value };
+                              return { ...p, customFields: cf };
+                            })}
+                            placeholder="Nombre del costo"
+                            className="w-36 shrink-0 border border-[#E0DED8] px-3 py-2.5 font-dm text-sm text-[#111] placeholder-[#CCC] focus:outline-none focus:border-[#111] rounded-sm" />
+                          <input type="number" min="0" value={field.value}
+                            onChange={e => setFormProd((p: any) => {
+                              const cf = [...p.customFields];
+                              cf[idx] = { ...cf[idx], value: e.target.value };
+                              return { ...p, customFields: cf };
+                            })}
+                            placeholder="0"
+                            className="flex-1 border border-[#E0DED8] px-3 py-2.5 font-dm text-sm text-[#111] focus:outline-none focus:border-[#111] rounded-sm" />
+                          <button type="button" onClick={() => setFormProd((p: any) => ({ ...p, customFields: p.customFields.filter((_: any, i: number) => i !== idx) }))}
+                            className="text-[#CCC] hover:text-[#E63A2E] transition-colors p-1 shrink-0">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                          </button>
+                        </div>
+                      ))}
+                      {/* Botón agregar campo */}
+                      <button type="button"
+                        onClick={() => setFormProd((p: any) => ({ ...p, customFields: [...p.customFields, { label: "", value: "" }] }))}
+                        className="flex items-center gap-1.5 font-dm text-xs text-[#888] hover:text-[#111] transition-colors mt-1">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                        Agregar otro costo
+                      </button>
+                    </div>
+                    {calcTotalProd(formProd.costBreakdown, formProd.customFields) > 0 && (
+                      <div className="mt-3 bg-[#F5F4F0] rounded-sm p-3 space-y-1">
+                        <div className="flex justify-between">
+                          <span className="font-dm text-xs font-bold text-[#111] uppercase tracking-wider">Costo total</span>
+                          <span className="font-dm text-sm font-bold text-[#E63A2E]">{fmt(calcTotalProd(formProd.costBreakdown, formProd.customFields))}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-dm text-xs text-[#888]">Precio sugerido (×2.5)</span>
+                          <span className="font-dm text-sm font-bold text-[#2A7D4F]">{fmt(calcTotalProd(formProd.costBreakdown, formProd.customFields) * 2.5)}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">Notas (opcional)</label>
+                    <input type="text" value={formProd.notes} onChange={e => setFormProd((p: any) => ({ ...p, notes: e.target.value }))}
+                      placeholder="Ej: Precio varía según proveedor"
+                      className="w-full border border-[#E0DED8] px-4 py-3 font-dm text-sm text-[#111] placeholder-[#CCC] focus:outline-none focus:border-[#111] rounded-sm" />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="px-5 py-4 border-t border-[#E0DED8] sticky bottom-0 bg-white flex gap-2">
+              <button onClick={() => setShowForm(false)} className="flex-1 border border-[#E0DED8] text-[#888] font-dm font-semibold text-xs uppercase tracking-widest py-3.5 rounded-sm hover:border-[#111] transition-colors">Cancelar</button>
+              <button onClick={handleSave} disabled={saving} className="flex-[2] bg-[#111] text-white font-dm font-semibold text-xs uppercase tracking-widest py-3.5 rounded-sm hover:bg-[#333] transition-colors disabled:opacity-50">
+                {saving ? "Guardando..." : editing ? "Guardar cambios" : "Crear"}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
