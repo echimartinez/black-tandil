@@ -18,6 +18,10 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | null>(null);
 
+function getProductId(product: Product): string | number {
+  return product._id ?? product.id ?? "";
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -26,11 +30,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const closeCart = useCallback(() => setIsOpen(false), []);
 
   const addItem = useCallback((product: Product, size: string) => {
+    const pid = getProductId(product);
     setItems(prev => {
-      const existing = prev.find(i => i.product.id === product.id && i.size === size);
+      const existing = prev.find(i => getProductId(i.product) === pid && i.size === size);
       if (existing) {
         return prev.map(i =>
-          i.product.id === product.id && i.size === size
+          getProductId(i.product) === pid && i.size === size
             ? { ...i, quantity: i.quantity + 1 }
             : i
         );
@@ -41,15 +46,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const removeItem = useCallback((productId: number | string, size: string) => {
-    setItems(prev => prev.filter(i => !(i.product.id === productId && i.size === size)));
+    setItems(prev => prev.filter(i => !(getProductId(i.product) === productId && i.size === size)));
   }, []);
 
   const updateQuantity = useCallback((productId: number | string, size: string, quantity: number) => {
     if (quantity <= 0) {
-      setItems(prev => prev.filter(i => !(i.product.id === productId && i.size === size)));
+      setItems(prev => prev.filter(i => !(getProductId(i.product) === productId && i.size === size)));
     } else {
       setItems(prev => prev.map(i =>
-        i.product.id === productId && i.size === size ? { ...i, quantity } : i
+        getProductId(i.product) === productId && i.size === size ? { ...i, quantity } : i
       ));
     }
   }, []);
