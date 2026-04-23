@@ -79,7 +79,7 @@ export default function CartDrawer() {
           ) : (
             <div className="flex flex-col gap-4">
               {items.map((item) => (
-                <div key={`${item.product.id}-${item.size}`}
+                <div key={`${item.product._id ?? item.product.id}-${item.size}`}
                   className="flex gap-2.5 pb-4 border-b border-[#F0EDE6] last:border-0">
                   <div className="relative w-16 h-16 bg-[#ECEAE4] rounded-sm overflow-hidden flex-shrink-0">
                     <Image src={item.product.image} alt={item.product.name} fill sizes="64px" className="object-cover" />
@@ -91,16 +91,16 @@ export default function CartDrawer() {
                       ${(item.product.price * item.quantity).toLocaleString("es-AR")}
                     </p>
                     <div className="flex items-center gap-1.5 mt-2">
-                      <button onClick={() => updateQuantity(item.product.id, item.size, item.quantity - 1)}
+                      <button onClick={() => updateQuantity((item.product._id ?? item.product.id)!, item.size, item.quantity - 1)}
                         className="w-5 h-5 border border-[#E0DED8] rounded-sm flex items-center justify-center text-[#111] hover:bg-[#F5F4F0] transition-colors text-xs font-bold">
                         −
                       </button>
                       <span className="font-dm text-xs w-3 text-center">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.product.id, item.size, item.quantity + 1)}
+                      <button onClick={() => updateQuantity((item.product._id ?? item.product.id)!, item.size, item.quantity + 1)}
                         className="w-5 h-5 border border-[#E0DED8] rounded-sm flex items-center justify-center text-[#111] hover:bg-[#F5F4F0] transition-colors text-xs font-bold">
                         +
                       </button>
-                      <button onClick={() => removeItem(item.product.id, item.size)}
+                      <button onClick={() => removeItem((item.product._id ?? item.product.id)!, item.size)}
                         className="ml-auto text-[#CCC] hover:text-[#E63A2E] transition-colors">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <polyline points="3 6 5 6 21 6"/>
