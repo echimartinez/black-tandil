@@ -1,15 +1,171 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 const EMPTY_FORM = {
-  name: "", price: "", originalPrice: "", image: "", category: "",
+  name: "", price: "", originalPrice: "", image: "", images: [] as string[], category: "",
   description: "", sizes: [] as string[],
   stockBySize: {} as Record<string, number>,
   sale: false, isNew: false, featured: false, active: true,
 };
+
+// ─── Cloudinary Upload ────────────────────────────────────────────────────────
+
+async function uploadToCloudinary(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+    { method: "POST", body: formData }
+  );
+  if (!res.ok) throw new Error("Error al subir imagen");
+  const data = await res.json();
+  return data.secure_url;
+}
+
+// ─── ImageUploader ────────────────────────────────────────────────────────────
+
+function ImageUploader({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (url: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    setUploading(true);
+    try {
+      const url = await uploadToCloudinary(file);
+      onChange(url);
+    } catch {
+      alert("Error al subir la imagen. Verificá las variables de Cloudinary.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div>
+      <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">{label}</label>
+
+      {/* Drop zone */}
+      <div
+        onClick={() => inputRef.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
+        className={`relative border-2 border-dashed rounded-sm cursor-pointer transition-colors flex items-center justify-center
+          ${dragOver ? "border-[#111] bg-[#F5F4F0]" : "border-[#E0DED8] bg-white hover:border-[#AAA]"}
+          ${value ? "aspect-square" : "h-32"}`}
+      >
+        {uploading ? (
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-5 h-5 border-2 border-[#111] border-t-transparent rounded-full animate-spin" />
+            <span className="font-dm text-xs text-[#888]">Subiendo...</span>
+          </div>
+        ) : value ? (
+          <>
+            <Image src={value} alt="Preview" fill sizes="400px" className="object-cover rounded-sm" />
+            <div className="absolute inset-0 bg-black/0 hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 hover:opacity-100 rounded-sm">
+              <span className="font-dm text-xs text-white font-semibold bg-black/50 px-3 py-1 rounded-full">Cambiar imagen</span>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center gap-2 px-4 text-center">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#AAA" strokeWidth="1.5">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+            </svg>
+            <span className="font-dm text-xs text-[#888]">Arrastrá o hacé click para subir</span>
+            <span className="font-dm text-[10px] text-[#CCC]">JPG, PNG, WEBP</span>
+          </div>
+        )}
+        <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+      </div>
+    </div>
+  );
+}
+
+// ─── MultiImageUploader ───────────────────────────────────────────────────────
+
+function MultiImageUploader({
+  values,
+  onChange,
+}: {
+  values: string[];
+  onChange: (urls: string[]) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFiles = async (files: FileList) => {
+    setUploading(true);
+    try {
+      const uploaded = await Promise.all(
+        Array.from(files).filter(f => f.type.startsWith("image/")).map(uploadToCloudinary)
+      );
+      onChange([...values, ...uploaded]);
+    } catch {
+      alert("Error al subir alguna imagen.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeImage = (idx: number) => {
+    onChange(values.filter((_, i) => i !== idx));
+  };
+
+  return (
+    <div>
+      <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">
+        Galería de imágenes <span className="normal-case text-[#CCC]">(opcional, para el swipe)</span>
+      </label>
+      <div className="grid grid-cols-3 gap-2">
+        {values.map((url, idx) => (
+          <div key={idx} className="relative aspect-square bg-[#ECEAE4] rounded-sm overflow-hidden group">
+            <Image src={url} alt={`Imagen ${idx + 1}`} fill sizes="150px" className="object-cover" />
+            <button
+              type="button"
+              onClick={() => removeImage(idx)}
+              className="absolute top-1 right-1 w-6 h-6 bg-[#E63A2E] text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+        ))}
+
+        {/* Add button */}
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="aspect-square border-2 border-dashed border-[#E0DED8] rounded-sm flex flex-col items-center justify-center gap-1 hover:border-[#AAA] transition-colors"
+        >
+          {uploading ? (
+            <div className="w-4 h-4 border-2 border-[#111] border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#CCC" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
+              <span className="font-dm text-[9px] text-[#CCC]">Agregar</span>
+            </>
+          )}
+        </button>
+      </div>
+      <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { if (e.target.files?.length) handleFiles(e.target.files); }} />
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
@@ -43,7 +199,7 @@ export default function AdminProductsPage() {
     setForm({
       name: p.name, price: String(p.price),
       originalPrice: p.originalPrice ? String(p.originalPrice) : "",
-      image: p.image, category: p.category ?? "",
+      image: p.image, images: p.images ?? [], category: p.category ?? "",
       description: p.description ?? "", sizes: p.sizes ?? [],
       stockBySize: p.stockBySize ?? {},
       sale: p.sale ?? false, isNew: p.isNew ?? false,
@@ -196,10 +352,18 @@ export default function AdminProductsPage() {
                 <input type="number" value={form.originalPrice} onChange={e => setForm(prev => ({ ...prev, originalPrice: e.target.value }))} placeholder="Dejar vacío si no está en sale" className="w-full border border-[#E0DED8] px-4 py-3 font-dm text-sm text-[#111] placeholder-[#CCC] focus:outline-none focus:border-[#111] rounded-sm transition-colors" />
               </div>
 
-              <div>
-                <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">Imagen principal (ruta)</label>
-                <input type="text" value={form.image} onChange={e => setForm(prev => ({ ...prev, image: e.target.value }))} placeholder="Ej: /camisaco.png" className="w-full border border-[#E0DED8] px-4 py-3 font-dm text-sm text-[#111] placeholder-[#CCC] focus:outline-none focus:border-[#111] rounded-sm transition-colors" />
-              </div>
+              {/* Imagen principal con Cloudinary */}
+              <ImageUploader
+                label="Imagen principal"
+                value={form.image}
+                onChange={(url) => setForm(prev => ({ ...prev, image: url }))}
+              />
+
+              {/* Galería adicional */}
+              <MultiImageUploader
+                values={form.images}
+                onChange={(urls) => setForm(prev => ({ ...prev, images: urls }))}
+              />
 
               <div>
                 <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">Categoría</label>
@@ -217,12 +381,6 @@ export default function AdminProductsPage() {
                 <label className="font-dm text-xs text-[#888] uppercase tracking-wider block mb-1.5">Descripción corta</label>
                 <input type="text" value={form.description} onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))} placeholder="Para la card del producto" className="w-full border border-[#E0DED8] px-4 py-3 font-dm text-sm text-[#111] placeholder-[#CCC] focus:outline-none focus:border-[#111] rounded-sm transition-colors" />
               </div>
-
-              {form.image && (
-                <div className="relative w-full aspect-square bg-[#ECEAE4] rounded-sm overflow-hidden">
-                  <Image src={form.image} alt="Preview" fill sizes="400px" className="object-cover" />
-                </div>
-              )}
 
               <div className="border border-[#E0DED8] rounded-sm px-4 divide-y divide-[#E0DED8]">
                 <Toggle label="Activo (visible en la tienda)" value={form.active} onChange={() => setForm(p => ({ ...p, active: !p.active }))} />

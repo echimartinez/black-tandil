@@ -4,7 +4,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev';
 const ADMIN = process.env.ADMIN_EMAIL ?? '';
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://blacktandil.com';
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://somosblack.ar';
 
 // ─── Templates ────────────────────────────────────────────────────────────────
 
@@ -15,7 +15,7 @@ function baseWrapper(content: string) {
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Black Tandil</title>
+  <title>BLACK</title>
 </head>
 <body style="margin:0;padding:0;background:#F5F4F0;font-family:'Helvetica Neue',Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F4F0;padding:32px 16px;">
@@ -25,11 +25,11 @@ function baseWrapper(content: string) {
           <!-- Header -->
           <tr>
             <td style="background:#111111;padding:24px 32px;">
-              <p style="margin:0;font-size:28px;font-weight:900;color:#ffffff;letter-spacing:2px;text-transform:uppercase;">
-                BLACK TANDIL
+              <p style="margin:0;font-size:32px;font-weight:900;color:#ffffff;letter-spacing:4px;text-transform:uppercase;">
+                BLACK
               </p>
               <p style="margin:4px 0 0;font-size:11px;color:#555555;letter-spacing:3px;text-transform:uppercase;">
-                Ropa urbana · Tandil
+                somosblack.ar
               </p>
             </td>
           </tr>
@@ -43,8 +43,8 @@ function baseWrapper(content: string) {
           <tr>
             <td style="background:#F5F4F0;padding:20px 32px;border-top:1px solid #E0DED8;">
               <p style="margin:0;font-size:11px;color:#888888;text-align:center;">
-                © ${new Date().getFullYear()} Black Tandil · Tandil, Buenos Aires<br/>
-                <a href="${SITE}" style="color:#888888;">blacktandil.com</a>
+                © ${new Date().getFullYear()} BLACK · Argentina<br/>
+                <a href="${SITE}" style="color:#888888;">somosblack.ar</a>
               </p>
             </td>
           </tr>
@@ -99,7 +99,7 @@ function orderConfirmationHtml(order: {
 
     <p style="margin:0 0 24px;font-size:14px;color:#666666;line-height:1.6;">
       Te avisaremos cuando tu pedido sea despachado. Si tenés alguna consulta,
-      respondé este email o escribinos por Instagram.
+      respondé este email o escribinos por Instagram <a href="https://instagram.com/somosblack.ar" style="color:#111111;">@somosblack.ar</a>.
     </p>
 
     <a href="${SITE}" style="display:inline-block;background:#111111;color:#ffffff;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;padding:14px 28px;text-decoration:none;">
@@ -167,7 +167,7 @@ function welcomeHtml(userName: string) {
     </h1>
 
     <p style="margin:0 0 16px;font-size:15px;color:#444444;line-height:1.6;">
-      Tu cuenta en <strong>Black Tandil</strong> fue creada exitosamente.
+      Tu cuenta en <strong>BLACK</strong> fue creada exitosamente.
       Ya podés explorar nuestro catálogo y hacer tu primera compra.
     </p>
 
@@ -193,7 +193,7 @@ export async function sendOrderConfirmation(params: {
     await resend.emails.send({
       from: FROM,
       to: params.to,
-      subject: '✅ Pago recibido — Black Tandil',
+      subject: '✅ Pago recibido — BLACK',
       html: orderConfirmationHtml(params.order),
     });
     console.log(`✅ Email de confirmación enviado a ${params.to}`);
@@ -230,7 +230,7 @@ export async function sendWelcomeEmail(params: { to: string; name: string }) {
     await resend.emails.send({
       from: FROM,
       to: params.to,
-      subject: '¡Bienvenido/a a Black Tandil!',
+      subject: '¡Bienvenido/a a BLACK!',
       html: welcomeHtml(params.name),
     });
     console.log(`✅ Email de bienvenida enviado a ${params.to}`);
