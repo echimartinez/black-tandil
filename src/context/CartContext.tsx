@@ -1,7 +1,9 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
 import { CartItem, Product } from "@/types";
+
+const STORAGE_KEY = "black_cart";
 
 interface CartContextType {
   items: CartItem[];
@@ -22,9 +24,39 @@ function getProductId(product: Product): string | number {
   return product._id ?? product.id ?? "";
 }
 
+function loadFromStorage(): CartItem[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as CartItem[];
+  } catch {
+    return [];
+  }
+}
+
+function saveToStorage(items: CartItem[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  } catch {
+    // storage lleno o bloqueado — ignorar silenciosamente
+  }
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Cargar desde localStorage solo en el cliente (evita hydration mismatch)
+  useEffect(() => {
+    setItems(loadFromStorage());
+    setHydrated(true);
+  }, []);
+
+  // Guardar en localStorage cada vez que cambia el carrito (después de hydrate)
+  useEffect(() => {
+    if (hydrated) saveToStorage(items);
+  }, [items, hydrated]);
 
   const openCart = useCallback(() => setIsOpen(true), []);
   const closeCart = useCallback(() => setIsOpen(false), []);
