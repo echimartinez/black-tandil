@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useCart } from "@/context/CartContext";
 
 type Tab = "pedidos" | "direccion" | "datos";
 
@@ -33,13 +34,170 @@ interface Order {
   items?: OrderItem[];
 }
 
+// ─── OrderCard ────────────────────────────────────────────────────────────────
+
+function OrderCard({ order }: { order: Order }) {
+  const router = useRouter();
+  const { addItem } = useCart();
+  const [expanded, setExpanded] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(0);
+  const [repeating, setRepeating] = useState(false);
+
+  const items = order.items ?? [];
+  const imagesWithItems = items.filter(i => i.image);
+  const isApproved = order.status === "approved";
+
+  const handleRepeat = () => {
+    setRepeating(true);
+    items.forEach(item => {
+      // Buscamos el producto en la tienda por nombre para obtener el _id
+      // Si no está disponible, agregamos con datos mínimos del historial
+      addItem(
+        { name: item.name, price: item.price, image: item.image ?? "", _id: undefined, id: undefined },
+        item.size
+      );
+    });
+    setTimeout(() => {
+      setRepeating(false);
+      router.push("/");
+    }, 600);
+  };
+
+  return (
+    <div className="bg-white border border-[#E0DED8] rounded-sm overflow-hidden">
+      {/* Barra de estado */}
+      <div className={`h-1 w-full ${isApproved ? "bg-[#2A7D4F]" : "bg-yellow-400"}`} />
+
+      {/* Carrusel de imágenes */}
+      {imagesWithItems.length > 0 && (
+        <div className="relative bg-[#F5F4F0] overflow-hidden" style={{ height: 200 }}>
+          <div
+            className="flex transition-transform duration-300 ease-in-out h-full"
+            style={{ transform: `translateX(-${selectedImage * 100}%)` }}
+          >
+            {imagesWithItems.map((item, i) => (
+              <div key={i} className="flex-shrink-0 w-full h-full relative">
+                <Image src={item.image!} alt={item.name} fill className="object-contain p-4" />
+                <div className="absolute bottom-2 left-0 right-0 flex justify-center">
+                  <span className="bg-black/60 text-white font-dm text-[10px] px-2 py-0.5 rounded-full">
+                    {item.name} — T. {item.size}{item.quantity > 1 ? ` ×${item.quantity}` : ""}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {selectedImage > 0 && (
+            <button onClick={() => setSelectedImage(i => i - 1)}
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-white/80 rounded-full flex items-center justify-center shadow-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+          )}
+          {selectedImage < imagesWithItems.length - 1 && (
+            <button onClick={() => setSelectedImage(i => i + 1)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-white/80 rounded-full flex items-center justify-center shadow-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+          )}
+          {imagesWithItems.length > 1 && (
+            <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-1">
+              {imagesWithItems.map((_, i) => (
+                <button key={i} onClick={() => setSelectedImage(i)}
+                  className={`w-1.5 h-1.5 rounded-full transition-colors ${i === selectedImage ? "bg-white" : "bg-white/40"}`} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Header de la orden */}
+      <div className="p-4">
+        <div className="flex items-start justify-between">
+          <div className="flex-1 min-w-0">
+            <p className="font-dm text-[10px] text-[#888] uppercase tracking-wider">
+              {new Date(order.createdAt).toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" })}
+            </p>
+            <p className="font-dm font-semibold text-sm text-[#111] mt-0.5 leading-tight truncate pr-2">
+              {order.title}
+            </p>
+          </div>
+          <span className={`flex-shrink-0 font-dm text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
+            isApproved ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"
+          }`}>
+            {isApproved ? "Pagado" : "Pendiente"}
+          </span>
+        </div>
+
+        {/* Desglose de items — expandible */}
+        {items.length > 0 && (
+          <div className="mt-3">
+            <button
+              onClick={() => setExpanded(p => !p)}
+              className="flex items-center gap-1 font-dm text-xs text-[#888] hover:text-[#111] transition-colors"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                className={`transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}>
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+              {expanded ? "Ocultar detalle" : `Ver ${items.length} ${items.length === 1 ? "producto" : "productos"}`}
+            </button>
+
+            {expanded && (
+              <div className="mt-2 space-y-2">
+                {items.map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 py-2 border-t border-[#F0EDE6] first:border-t-0">
+                    {item.image && (
+                      <div className="relative w-12 h-12 flex-shrink-0 bg-[#ECEAE4] rounded-sm overflow-hidden">
+                        <Image src={item.image} alt={item.name} fill className="object-cover" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-dm text-sm font-semibold text-[#111] leading-tight truncate">{item.name}</p>
+                      <p className="font-dm text-xs text-[#888]">
+                        Talle {item.size} · Cant. {item.quantity}
+                      </p>
+                    </div>
+                    <p className="font-dm text-sm font-bold text-[#111] flex-shrink-0">
+                      ${(item.price * item.quantity).toLocaleString("es-AR")}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Footer: referencia + total + botón repetir */}
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#F0EDE6]">
+          <p className="font-dm text-[10px] text-[#CCC]">#{order.external_reference.slice(-8)}</p>
+          <p className="font-dm font-bold text-base text-[#111]">
+            ${order.amount.toLocaleString("es-AR")}
+          </p>
+        </div>
+
+        {/* Botón repetir pedido */}
+        {items.length > 0 && isApproved && (
+          <button
+            onClick={handleRepeat}
+            disabled={repeating}
+            className="mt-3 w-full border border-[#111] text-[#111] font-dm font-semibold text-xs uppercase tracking-widest py-2.5 rounded-sm hover:bg-[#111] hover:text-white transition-colors disabled:opacity-50"
+          >
+            {repeating ? "✓ Agregado al carrito" : "Repetir pedido"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
 export default function PerfilPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("pedidos");
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
-  const [carouselIndexes, setCarouselIndexes] = useState<Record<string, number>>({});
   const [address, setAddress] = useState<Address>({ street: "", city: "", province: "", postalCode: "", phone: "" });
   const [name, setName] = useState("");
   const [editingAddress, setEditingAddress] = useState(false);
@@ -115,7 +273,7 @@ export default function PerfilPage() {
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-bebas text-2xl tracking-tight text-[#111] leading-none">{session.user?.name}</p>
+          <p className="font-bebas text-2xl tracking-tight text-[#111] leading-none">{name || session.user?.name}</p>
           <p className="font-dm text-xs text-[#888] mt-0.5 truncate">{session.user?.email}</p>
         </div>
         <button onClick={() => signOut({ callbackUrl: "/" })}
@@ -126,7 +284,7 @@ export default function PerfilPage() {
 
       {/* Tabs */}
       <div className="flex border-b border-[#E0DED8] bg-white">
-        {([ "pedidos", "direccion", "datos"] as Tab[]).map(tab => (
+        {(["pedidos", "direccion", "datos"] as Tab[]).map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`flex-1 py-3 font-dm text-xs font-semibold uppercase tracking-wider transition-colors ${
               activeTab === tab ? "text-[#111] border-b-2 border-[#111]" : "text-[#888]"
@@ -158,109 +316,7 @@ export default function PerfilPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {orders.map(order => {
-                const items = order.items ?? [];
-                const imagesWithItems = items.filter(i => i.image);
-                const currentIdx = carouselIndexes[order._id] ?? 0;
-                const hasPrev = currentIdx > 0;
-                const hasNext = currentIdx < imagesWithItems.length - 1;
-
-                const goTo = (dir: 1 | -1) => {
-                  setCarouselIndexes(prev => ({
-                    ...prev,
-                    [order._id]: (prev[order._id] ?? 0) + dir,
-                  }));
-                };
-
-                return (
-                  <div key={order._id} className="bg-white border border-[#E0DED8] rounded-sm overflow-hidden">
-                    {/* Barra de color por estado */}
-                    <div className={`h-1 w-full ${order.status === "approved" ? "bg-green-500" : "bg-yellow-400"}`} />
-
-                    {/* Carrusel de imágenes */}
-                    {imagesWithItems.length > 0 && (
-                      <div className="relative bg-[#F5F4F0] overflow-hidden" style={{ height: 180 }}>
-                        <div
-                          className="flex transition-transform duration-300 ease-in-out h-full"
-                          style={{ transform: `translateX(-${currentIdx * 100}%)` }}
-                        >
-                          {imagesWithItems.map((item, i) => (
-                            <div key={i} className="flex-shrink-0 w-full h-full flex items-center justify-center relative">
-                              <Image
-                                src={item.image!}
-                                alt={item.name}
-                                fill
-                                className="object-contain p-4"
-                              />
-                              {/* Etiqueta del item */}
-                              <div className="absolute bottom-2 left-0 right-0 flex justify-center">
-                                <span className="bg-black/60 text-white font-dm text-[10px] px-2 py-0.5 rounded-full">
-                                  {item.name} — Talle {item.size}
-                                  {item.quantity > 1 ? ` ×${item.quantity}` : ""}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Botones de navegación */}
-                        {hasPrev && (
-                          <button
-                            onClick={() => goTo(-1)}
-                            className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-white/80 rounded-full flex items-center justify-center shadow-sm hover:bg-white transition-colors"
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2.5"><path d="M15 18l-6-6 6-6"/></svg>
-                          </button>
-                        )}
-                        {hasNext && (
-                          <button
-                            onClick={() => goTo(1)}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-white/80 rounded-full flex items-center justify-center shadow-sm hover:bg-white transition-colors"
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
-                          </button>
-                        )}
-
-                        {/* Dots indicadores */}
-                        {imagesWithItems.length > 1 && (
-                          <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-1">
-                            {imagesWithItems.map((_, i) => (
-                              <button
-                                key={i}
-                                onClick={() => setCarouselIndexes(prev => ({ ...prev, [order._id]: i }))}
-                                className={`w-1.5 h-1.5 rounded-full transition-colors ${i === currentIdx ? "bg-white" : "bg-white/40"}`}
-                              />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Info del pedido */}
-                    <div className="p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p className="font-dm text-[10px] text-[#888] uppercase tracking-wider">
-                            {new Date(order.createdAt).toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" })}
-                          </p>
-                          <p className="font-dm font-semibold text-sm text-[#111] mt-0.5 leading-tight">{order.title}</p>
-                        </div>
-                        <span className={`flex-shrink-0 ml-2 font-dm text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
-                          order.status === "approved" ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"
-                        }`}>
-                          {order.status === "approved" ? "Pagado" : "Pendiente"}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#F0EDE6]">
-                        <p className="font-dm text-[10px] text-[#AAA]">#{order.external_reference}</p>
-                        <p className="font-dm font-bold text-base text-[#111]">
-                          ${order.amount.toLocaleString("es-AR")}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              {orders.map(order => <OrderCard key={order._id} order={order} />)}
             </div>
           )}
         </div>
@@ -388,5 +444,3 @@ export default function PerfilPage() {
     </div>
   );
 }
-
-
