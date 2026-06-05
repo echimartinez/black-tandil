@@ -6,6 +6,7 @@ import CartDrawer from "@/components/CartDrawer";
 import Header from "@/components/Header";
 import AuthProvider from "@/components/AuthProvider";
 import SplashScreen from "@/components/SplashScreen";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 
 const bebas = Bebas_Neue({
   weight: "400",
@@ -72,6 +73,7 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${bebas.variable} ${dmSans.variable}`}>
       <body className="min-h-screen flex flex-col bg-[#F5F4F0] text-[#111] overflow-x-hidden">
+        <GoogleAnalytics />
         <AuthProvider>
           <SplashScreen />
           <CartProvider>
