@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Product } from "@/types";
 import ProductCard from "@/components/ProductCard";
+import { useReveal } from "@/hooks/useReveal";
 
 interface HomeData {
   featured: Product[];
@@ -29,10 +30,12 @@ function Section({
   ctaHref?: string;
 }) {
   const router = useRouter();
+  const sectionRef = useReveal<HTMLDivElement>();
+
   if (products.length === 0) return null;
 
   return (
-    <div className="mt-8">
+    <div ref={sectionRef} className="mt-8 reveal">
       <div className="flex items-center justify-between px-4 mb-4">
         <div className="flex items-center gap-2">
           <h2 className="font-bebas text-2xl tracking-tight text-[#111]">{title}</h2>
@@ -62,6 +65,7 @@ export default function HomeClient() {
   const router = useRouter();
   const [data, setData] = useState<HomeData | null>(null);
   const [loading, setLoading] = useState(true);
+  const heroRef = useReveal<HTMLDivElement>();
 
   useEffect(() => {
     fetch("/api/home")
@@ -74,7 +78,7 @@ export default function HomeClient() {
     <div className="w-full pb-16">
 
       {/* Hero */}
-      <div className="relative w-full aspect-[4/5] bg-[#111] overflow-hidden">
+      <div ref={heroRef} className="relative w-full aspect-[4/5] bg-[#111] overflow-hidden reveal">
         {/* Acá podés poner una imagen de fondo: */}
         {/* <Image src="/hero.jpg" alt="Black" fill className="object-cover opacity-60" /> */}
         <div className="absolute inset-0 flex flex-col justify-end px-6 pb-10">
