@@ -5,8 +5,8 @@
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "C:/Users/pc/black-tandil"]
     },
     "bash": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-bash"]
+    "command": "npx",
+    "args": ["-y", "bash-mcp"]
     },
     "github": {
       "command": "npx",
