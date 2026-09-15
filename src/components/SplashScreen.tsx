@@ -20,9 +20,17 @@ interface Particle {
 export default function SplashScreen() {
   const [phase, setPhase] = useState<Phase>("playing");
   const [reducedMotion, setReducedMotion] = useState(false);
+  // Arranca en false (igual que en el servidor, que no tiene window) y se
+  // corrige en el cliente antes del primer paint — evita el mismatch de
+  // hidratación que daba si leíamos window.innerWidth directo en el render.
+  const [isMobile, setIsMobile] = useState(false);
   const tiltRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 768);
+  }, []);
 
   // Fases de tiempo
   useEffect(() => {
@@ -38,15 +46,19 @@ export default function SplashScreen() {
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     setReducedMotion(mq.matches);
-    if (typeof document !== "undefined") {
-      document.body.style.overflow = "hidden";
-    }
-    return () => {
-      if (typeof document !== "undefined") {
-        document.body.style.overflow = "";
-      }
-    };
   }, []);
+
+  // Bloquea el scroll mientras se ve el splash. El componente queda montado
+  // para siempre en el layout (solo deja de pintar nada cuando phase==="gone"),
+  // así que liberamos el scroll a mano según la fase en vez de esperar un
+  // "unmount" que nunca va a pasar.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.body.style.overflow = phase === "gone" ? "" : "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [phase]);
 
   // Tilt 3D con el mouse (desktop) — se aplica a la escena completa
   useEffect(() => {
@@ -79,8 +91,8 @@ export default function SplashScreen() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const isMobile = window.innerWidth < 768;
-    const COUNT = isMobile ? 40 : 90;
+    const mobileCanvas = window.innerWidth < 768;
+    const COUNT = mobileCanvas ? 40 : 90;
     const DPR = Math.min(window.devicePixelRatio || 1, 2);
     const FOCAL = 300;
 
@@ -184,7 +196,6 @@ export default function SplashScreen() {
 
   if (phase === "gone") return null;
 
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const ringCount = isMobile ? 5 : 8;
   const rings = Array.from({ length: ringCount });
 

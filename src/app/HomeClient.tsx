@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Product } from "@/types";
 import ProductCard from "@/components/ProductCard";
+import Manifesto from "@/components/Manifesto";
 import { useReveal } from "@/hooks/useReveal";
 
 interface HomeData {
@@ -81,22 +82,33 @@ export default function HomeClient() {
       <div ref={heroRef} className="relative w-full aspect-[4/5] bg-[#111] overflow-hidden reveal">
         {/* Acá podés poner una imagen de fondo: */}
         {/* <Image src="/hero.jpg" alt="Black" fill className="object-cover opacity-60" /> */}
-        <div className="absolute inset-0 flex flex-col justify-end px-6 pb-10">
-          <p className="font-dm text-[11px] text-white/50 uppercase tracking-[0.3em] mb-2">
+        <div className="absolute inset-0 flex flex-col justify-end px-6 pb-10 hero-perspective">
+          <p className="hero-eyebrow font-dm text-[11px] text-white/50 uppercase tracking-[0.3em] mb-2">
             Nueva colección
           </p>
           <h1 className="font-bebas text-6xl text-white leading-none tracking-tight">
-            STYLE<br />IN BLACK
+            <span className="hero-line hero-line-1">STYLE</span>
+            <span className="hero-line hero-line-2">IN BLACK</span>
           </h1>
-          <p className="font-dm text-sm text-white/60 mt-3 max-w-[220px]">
+          <p className="hero-sub font-dm text-sm text-white/60 mt-3 max-w-[220px]">
             Ropa de calidad para el día a día. Envíos a todo el país.
           </p>
           <button
             onClick={() => router.push("/tienda")}
-            className="mt-6 w-fit bg-white text-[#111] font-dm font-bold text-xs uppercase tracking-widest px-6 py-3 rounded-sm hover:bg-[#F0EDE6] transition-colors"
+            className="hero-cta mt-6 w-fit bg-white text-[#111] font-dm font-bold text-xs uppercase tracking-widest px-6 py-3 rounded-sm hover:bg-[#F0EDE6] transition-colors"
           >
             Ver colección
           </button>
+        </div>
+
+        {/* Indicador de scroll — invita a seguir navegando */}
+        <div className="scroll-cue-fade absolute inset-x-0 bottom-4 flex justify-center pointer-events-none">
+          <div className="scroll-cue">
+            <span className="scroll-cue-line" />
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </div>
         </div>
       </div>
 
@@ -108,6 +120,9 @@ export default function HomeClient() {
           <span className="underline cursor-pointer">Ver términos</span>
         </p>
       </div>
+
+      {/* Manifiesto — sección scrollytelling que conecta el hero con la tienda */}
+      <Manifesto />
 
       {loading ? (
         <div className="px-4 mt-8 space-y-8">

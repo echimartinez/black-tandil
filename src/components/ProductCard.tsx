@@ -36,8 +36,8 @@ export default function ProductCard({ product, index = 0, variant = "grid" }: Pr
   }) ?? [];
 
   const wrapperClass = variant === "scroll"
-    ? "flex-shrink-0 w-44 text-left group cursor-pointer"
-    : "bg-[#F5F4F0] flex flex-col text-left w-full group cursor-pointer hover:bg-[#ECEAE4] transition-colors";
+    ? "flex-shrink-0 w-44 text-left group cursor-pointer tilt-card"
+    : "bg-[#F5F4F0] flex flex-col text-left w-full group cursor-pointer hover:bg-[#ECEAE4] transition-colors tilt-card";
 
   return (
     <button
@@ -45,7 +45,7 @@ export default function ProductCard({ product, index = 0, variant = "grid" }: Pr
       className={wrapperClass}
     >
       {/* Imagen */}
-      <div className={`relative w-full bg-[#ECEAE4] overflow-hidden ${
+      <div className={`relative w-full bg-[#ECEAE4] overflow-hidden tilt-card-inner ${
         variant === "scroll" ? "aspect-square rounded-sm" : "aspect-square"
       }`}>
         <Image
@@ -57,6 +57,7 @@ export default function ProductCard({ product, index = 0, variant = "grid" }: Pr
           loading={index === 0 ? "eager" : "lazy"}
           className={`object-cover group-hover:scale-105 transition-transform duration-500 ${sinStock ? "opacity-40" : ""}`}
         />
+        <div className="tilt-card-sheen" />
 
         {/* Badges top-left */}
         <div className="absolute top-2 left-2 flex flex-col gap-1">

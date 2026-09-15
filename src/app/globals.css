@@ -43,3 +43,180 @@ body {
 .reveal-delay-2 { transition-delay: 0.2s; }
 .reveal-delay-3 { transition-delay: 0.3s; }
 .reveal-delay-4 { transition-delay: 0.4s; }
+
+/* ============================================
+   HOME — Hero cinético (scroll-driven nativo, sin JS de scroll)
+   Progresivo: si el navegador no soporta animation-timeline,
+   el texto queda simplemente visible y quieto.
+   ============================================ */
+.hero-perspective {
+  perspective: 900px;
+}
+.hero-line {
+  display: block;
+  transform-style: preserve-3d;
+  will-change: transform, opacity, filter;
+}
+
+@supports (animation-timeline: scroll()) {
+  .hero-line-1 {
+    animation: heroRecede linear both;
+    animation-timeline: scroll(root block);
+    animation-range: 0 45vh;
+  }
+  .hero-line-2 {
+    animation: heroRecede linear both;
+    animation-timeline: scroll(root block);
+    animation-range: 0 60vh;
+  }
+  .hero-eyebrow, .hero-sub, .hero-cta {
+    animation: heroFadeOut linear both;
+    animation-timeline: scroll(root block);
+    animation-range: 0 35vh;
+  }
+}
+@keyframes heroRecede {
+  from { transform: translateZ(0) scale(1); letter-spacing: 0.02em; filter: blur(0px); opacity: 1; }
+  to { transform: translateZ(-180px) scale(1.22); letter-spacing: 0.3em; filter: blur(4px); opacity: 0.08; }
+}
+@keyframes heroFadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-16px); }
+}
+
+/* Indicador de scroll al pie del hero */
+.scroll-cue {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  animation: scrollCueBounce 1.8s ease-in-out infinite;
+}
+.scroll-cue-line {
+  width: 1px;
+  height: 26px;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.9), transparent);
+}
+@keyframes scrollCueBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(8px); }
+}
+@supports (animation-timeline: scroll()) {
+  .scroll-cue-fade {
+    animation: scrollCueFadeOut linear both;
+    animation-timeline: scroll(root block);
+    animation-range: 0 20vh;
+  }
+}
+@keyframes scrollCueFadeOut {
+  to { opacity: 0; }
+}
+
+/* ============================================
+   MANIFIESTO — sección scrollytelling entre el hero y los productos.
+   Base: reveal por IntersectionObserver (siempre funciona).
+   Progresivo: en navegadores con animation-timeline: view(), cada
+   línea se anima según su propio progreso de entrada en pantalla.
+   ============================================ */
+.manifesto-section {
+  position: relative;
+  background: #0A0A0A;
+  overflow: hidden;
+}
+.manifesto-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 90vw;
+  height: 90vw;
+  max-width: 520px;
+  max-height: 520px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(230,58,46,0.28) 0%, transparent 65%);
+  pointer-events: none;
+}
+.manifesto-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(circle at 50% 50%, black, transparent 75%);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, black, transparent 75%);
+  pointer-events: none;
+}
+
+.manifesto-line {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+.manifesto-section.reveal-visible .manifesto-line {
+  opacity: 1;
+  transform: translateY(0);
+}
+.manifesto-section.reveal-visible .manifesto-line:nth-child(1) { transition-delay: 0s; }
+.manifesto-section.reveal-visible .manifesto-line:nth-child(2) { transition-delay: 0.12s; }
+.manifesto-section.reveal-visible .manifesto-line:nth-child(3) { transition-delay: 0.24s; }
+
+@supports (animation-timeline: view()) {
+  .manifesto-line {
+    transition: none;
+    transform: translateY(50px) rotateX(25deg);
+    animation: manifestoIn linear both;
+    animation-timeline: view();
+  }
+  .manifesto-line:nth-child(1) { animation-range: entry 0% entry 45%; }
+  .manifesto-line:nth-child(2) { animation-range: entry 8% entry 55%; }
+  .manifesto-line:nth-child(3) { animation-range: entry 16% entry 65%; }
+}
+@keyframes manifestoIn {
+  to { opacity: 1; transform: translateY(0) rotateX(0); }
+}
+
+/* ============================================
+   PRODUCT CARD — tilt 3D sutil al hover (solo desktop/mouse real)
+   ============================================ */
+.tilt-card {
+  perspective: 700px;
+}
+.tilt-card-inner {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+  transform-style: preserve-3d;
+}
+.tilt-card:hover .tilt-card-inner {
+  transform: rotateX(6deg) rotateY(-8deg) scale(1.035) translateZ(0);
+  box-shadow: 0 18px 30px -14px rgba(0,0,0,0.4);
+}
+.tilt-card-sheen {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 42%, rgba(255,255,255,0.28) 50%, transparent 58%);
+  background-size: 220% 220%;
+  background-position: -60% -60%;
+  opacity: 0;
+  transition: opacity 0.4s ease, background-position 0.7s ease;
+  pointer-events: none;
+}
+.tilt-card:hover .tilt-card-sheen {
+  opacity: 1;
+  background-position: 160% 160%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-line, .scroll-cue, .scroll-cue-fade, .manifesto-line {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+  .manifesto-line { transition: none !important; }
+  .tilt-card-inner { transition: none; }
+  .tilt-card:hover .tilt-card-inner { transform: none; }
+}
+
+@media (hover: none) {
+  /* Touch: sin hover real, no tiene sentido gastar ciclos en el sheen */
+  .tilt-card-sheen { display: none; }
+}
