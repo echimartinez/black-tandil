@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Product } from "@/types";
 import ProductCard from "@/components/ProductCard";
 import Manifesto from "@/components/Manifesto";
+import HeroCarousel from "@/components/HeroCarousel";
 import { useReveal } from "@/hooks/useReveal";
 
 interface HomeData {
@@ -79,14 +80,18 @@ export default function HomeClient() {
     <div className="w-full pb-16">
 
       {/* Hero */}
-      <div ref={heroRef} className="relative w-full aspect-[4/5] bg-[#111] overflow-hidden reveal">
-        {/* Acá podés poner una imagen de fondo: */}
-        {/* <Image src="/hero.jpg" alt="Black" fill className="object-cover opacity-60" /> */}
-        <div className="absolute inset-0 flex flex-col justify-end px-6 pb-10 hero-perspective">
+      <div ref={heroRef} className="relative w-full aspect-[4/3] bg-[#111] overflow-hidden reveal">
+        {/* Carrusel de imágenes de fondo — cambiá los slides en HeroCarousel.tsx */}
+        <HeroCarousel intervalMs={3000} />
+
+        {/* Degradé para que el texto se lea bien sobre las fotos */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/10 z-[1]" />
+
+        <div className="absolute inset-0 z-10 flex flex-col justify-end px-6 pb-8 hero-perspective">
           <p className="hero-eyebrow font-dm text-[11px] text-white/50 uppercase tracking-[0.3em] mb-2">
             Nueva colección
           </p>
-          <h1 className="font-bebas text-6xl text-white leading-none tracking-tight">
+          <h1 className="font-bebas text-5xl text-white leading-none tracking-tight">
             <span className="hero-line hero-line-1">STYLE</span>
             <span className="hero-line hero-line-2">IN BLACK</span>
           </h1>
@@ -95,14 +100,14 @@ export default function HomeClient() {
           </p>
           <button
             onClick={() => router.push("/tienda")}
-            className="hero-cta mt-6 w-fit bg-white text-[#111] font-dm font-bold text-xs uppercase tracking-widest px-6 py-3 rounded-sm hover:bg-[#F0EDE6] transition-colors"
+            className="hero-cta mt-5 w-fit bg-white text-[#111] font-dm font-bold text-xs uppercase tracking-widest px-6 py-3 rounded-sm hover:bg-[#F0EDE6] transition-colors"
           >
             Ver colección
           </button>
         </div>
 
         {/* Indicador de scroll — invita a seguir navegando */}
-        <div className="scroll-cue-fade absolute inset-x-0 bottom-4 flex justify-center pointer-events-none">
+        <div className="scroll-cue-fade absolute inset-x-0 bottom-4 flex justify-center pointer-events-none z-10">
           <div className="scroll-cue">
             <span className="scroll-cue-line" />
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
