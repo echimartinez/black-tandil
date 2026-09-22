@@ -7,6 +7,7 @@ import { Product } from "@/types";
 import ProductCard from "@/components/ProductCard";
 import Manifesto from "@/components/Manifesto";
 import HeroCarousel from "@/components/HeroCarousel";
+import MagneticButton from "@/components/MagneticButton";
 import { useReveal } from "@/hooks/useReveal";
 
 interface HomeData {
@@ -79,41 +80,57 @@ export default function HomeClient() {
   return (
     <div className="w-full pb-16">
 
-      {/* Hero */}
-      <div ref={heroRef} className="relative w-full aspect-[4/3] bg-[#111] overflow-hidden reveal">
-        {/* Carrusel de imágenes de fondo — cambiá los slides en HeroCarousel.tsx */}
+      {/* Hero — foto completa de fondo, BLACK gigante solo de contorno flotando encima */}
+      <div ref={heroRef} className="relative w-full aspect-[4/3] bg-[#0A0A0A] overflow-hidden reveal">
         <HeroCarousel intervalMs={3000} />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/5 to-black/25 z-[1]" />
 
-        {/* Degradé para que el texto se lea bien sobre las fotos */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/10 z-[1]" />
-
-        <div className="absolute inset-0 z-10 flex flex-col justify-end px-6 pb-8 hero-perspective">
-          <p className="hero-eyebrow font-dm text-[11px] text-white/50 uppercase tracking-[0.3em] mb-2">
+        <div className="absolute inset-0 z-10 flex flex-col px-6 pt-5 pb-6">
+          <p className="hero-eyebrow hero-badge font-dm text-[11px] text-white/60 uppercase tracking-[0.3em]">
+            <span className="hero-live-dot" />
             Nueva colección
           </p>
-          <h1 className="font-bebas text-5xl text-white leading-none tracking-tight">
-            <span className="hero-line hero-line-1">STYLE</span>
-            <span className="hero-line hero-line-2">IN BLACK</span>
-          </h1>
-          <p className="hero-sub font-dm text-sm text-white/60 mt-3 max-w-[220px]">
-            Ropa de calidad para el día a día. Envíos a todo el país.
-          </p>
-          <button
-            onClick={() => router.push("/tienda")}
-            className="hero-cta mt-5 w-fit bg-white text-[#111] font-dm font-bold text-xs uppercase tracking-widest px-6 py-3 rounded-sm hover:bg-[#F0EDE6] transition-colors"
-          >
-            Ver colección
-          </button>
-        </div>
 
-        {/* Indicador de scroll — invita a seguir navegando */}
-        <div className="scroll-cue-fade absolute inset-x-0 bottom-4 flex justify-center pointer-events-none z-10">
-          <div className="scroll-cue">
-            <span className="scroll-cue-line" />
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6 9l6 6 6-6" />
-            </svg>
+          <div className="flex-1 flex items-center justify-center">
+            <h1 className="hero-outline-text">BLACK</h1>
           </div>
+
+          <div className="flex flex-col items-center text-center">
+            <p className="hero-sub font-dm text-sm text-white/70 max-w-[240px]">
+              Ropa de calidad para el día a día. Envíos a todo el país.
+            </p>
+            <MagneticButton
+              onClick={() => router.push("/tienda")}
+              className="hero-cta mt-4 w-fit bg-white text-[#111] font-dm font-bold text-xs uppercase tracking-widest px-7 py-3.5 rounded-sm hover:bg-[#F0EDE6] transition-colors"
+            >
+              Ver colección
+              <span className="hero-cta-arrow" aria-hidden="true">→</span>
+            </MagneticButton>
+          </div>
+        </div>
+      </div>
+
+      {/* Marquesina — movimiento constante, tipo cartel de aeropuerto */}
+      <div className="hero-marquee">
+        <div className="hero-marquee-track">
+          {Array.from({ length: 2 }).map((_, rep) => (
+            <div key={rep} className="inline-flex">
+              <span className="hero-marquee-item">Nueva colección</span>
+              <span className="hero-marquee-item">Envíos a todo el país</span>
+              <span className="hero-marquee-item">Streetwear Tandil</span>
+              <span className="hero-marquee-item">Style in Black</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Indicador de scroll — invita a seguir navegando */}
+      <div className="scroll-cue-fade flex justify-center pointer-events-none py-3 bg-[#0A0A0A]">
+        <div className="scroll-cue">
+          <span className="scroll-cue-line" />
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 9l6 6 6-6" />
+          </svg>
         </div>
       </div>
 

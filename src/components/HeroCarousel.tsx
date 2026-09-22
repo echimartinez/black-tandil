@@ -8,11 +8,17 @@ export interface HeroSlide {
   alt: string;
 }
 
-// Imágenes por defecto — cambiá estos paths o pasale tu propio array de "slides" por prop.
-const DEFAULT_SLIDES: HeroSlide[] = [
-  { src: "/camisacos.png", alt: "BLACK — colección" },
-  { src: "/camisaco2.png", alt: "BLACK — colección" },
-  { src: "/camisaco3.png", alt: "BLACK — colección" },
+// Imágenes servidas desde Cloudinary.
+// f_auto = formato óptimo por navegador (WebP/AVIF), q_auto = calidad óptima automática.
+// Esto hace que pesen bastante menos que los archivos originales sin que se note.
+const CLOUD = "dhtnlmmyf";
+const cld = (id: string) =>
+  `https://res.cloudinary.com/${CLOUD}/image/upload/f_auto,q_auto/${id}`;
+
+export const DEFAULT_SLIDES: HeroSlide[] = [
+  { src: cld("hero/black-hero-1"), alt: "BLACK — campaña" },
+  { src: cld("hero/black-hero-2"), alt: "BLACK — campaña" },
+  { src: cld("hero/black-hero-3"), alt: "BLACK — campaña" },
 ];
 
 export default function HeroCarousel({

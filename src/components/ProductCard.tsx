@@ -1,5 +1,6 @@
 "use client";
 
+import { ViewTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Product } from "@/types";
@@ -44,19 +45,21 @@ export default function ProductCard({ product, index = 0, variant = "grid" }: Pr
       onClick={() => router.push(`/producto/${product._id ?? product.id}`)}
       className={wrapperClass}
     >
-      {/* Imagen */}
+      {/* Imagen — nombrada para morphear con la imagen de la página de detalle */}
       <div className={`relative w-full bg-[#ECEAE4] overflow-hidden tilt-card-inner ${
         variant === "scroll" ? "aspect-square rounded-sm" : "aspect-square"
       }`}>
-        <Image
-          src={product.image}
-          alt={product.name}
-          fill
-          sizes={variant === "scroll" ? "176px" : "50vw"}
-          priority={index === 0}
-          loading={index === 0 ? "eager" : "lazy"}
-          className={`object-cover group-hover:scale-105 transition-transform duration-500 ${sinStock ? "opacity-40" : ""}`}
-        />
+        <ViewTransition name={`product-image-${product._id ?? product.id}`}>
+          <Image
+            src={product.image}
+            alt={product.name}
+            fill
+            sizes={variant === "scroll" ? "176px" : "50vw"}
+            priority={index === 0}
+            loading={index === 0 ? "eager" : "lazy"}
+            className={`object-cover group-hover:scale-105 transition-transform duration-500 ${sinStock ? "opacity-40" : ""}`}
+          />
+        </ViewTransition>
         <div className="tilt-card-sheen" />
 
         {/* Badges top-left */}

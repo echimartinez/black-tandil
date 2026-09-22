@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { ViewTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
@@ -72,7 +73,13 @@ export default function ProductClient({ product }: { product: Product }) {
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        <Image src={images[selectedImage]} alt={product.name} fill sizes="100vw" priority className="object-cover" />
+        {selectedImage === 0 ? (
+          <ViewTransition name={`product-image-${product._id ?? product.id}`}>
+            <Image src={images[selectedImage]} alt={product.name} fill sizes="100vw" priority className="object-cover" />
+          </ViewTransition>
+        ) : (
+          <Image src={images[selectedImage]} alt={product.name} fill sizes="100vw" priority className="object-cover" />
+        )}
 
         {/* Indicador de imagen */}
         {images.length > 1 && (

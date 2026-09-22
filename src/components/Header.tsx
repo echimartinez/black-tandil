@@ -1,16 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import CartIconButton from "@/components/CartIconButton";
 import NavDrawer from "@/components/NavDrawer";
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const lastY = useRef(0);
+  const ticking = useRef(false);
+
+  // Header inteligente: se esconde al bajar, reaparece apenas subís un poco.
+  // rAF-throttled para no recalcular en cada evento de scroll (barato en mobile).
+  useEffect(() => {
+    lastY.current = window.scrollY;
+    const onScroll = () => {
+      if (ticking.current) return;
+      ticking.current = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        const goingDown = y > lastY.current + 4; // pequeño umbral anti-jitter
+        const goingUp = y < lastY.current - 4;
+        const pastTop = y > 80; // nunca ocultar cerca del inicio de la página
+        if (pastTop && goingDown) setHidden(true);
+        else if (goingUp || y <= 80) setHidden(false);
+        lastY.current = y;
+        ticking.current = false;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Si se abre el menú, el header siempre visible (por las dudas)
+  useEffect(() => {
+    if (menuOpen) setHidden(false);
+  }, [menuOpen]);
 
   return (
     <>
-      <header className="bg-white border-b border-[#E0DED8] sticky top-0 z-40 relative">
+      <header className={`header-smart bg-white border-b border-[#E0DED8] sticky top-0 z-40 relative ${hidden ? "header-hidden" : ""}`}>
         <div className="w-full px-4 py-3 flex items-center justify-between">
 
           {/* Izquierda: hamburguesa */}
