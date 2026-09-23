@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Product } from "@/types";
 import ProductCard from "@/components/ProductCard";
-import EditorialBreak from "@/components/EditorialBreak";
 import HeroCarousel from "@/components/HeroCarousel";
 import MagneticButton from "@/components/MagneticButton";
 import { useReveal } from "@/hooks/useReveal";
@@ -129,8 +128,7 @@ export default function HomeClient() {
         </div>
       </div>
 
-      {/* Editorial break — un solo momento de marca, full-bleed, sin ruido */}
-      <EditorialBreak />
+
 
       {loading ? (
         <div className="px-4 mt-16 space-y-4">
