@@ -400,6 +400,134 @@ body {
 }
 
 /* ============================================
+   SCROLL UTILS — barra de progreso + botón volver arriba (sitio entero)
+   ============================================ */
+.scroll-progress-track {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  z-index: 60;
+  pointer-events: none;
+}
+.scroll-progress-bar {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #E63A2E, #111111);
+  transform-origin: left;
+  transform: scaleX(0);
+}
+@supports (animation-timeline: scroll()) {
+  .scroll-progress-bar {
+    animation: scrollProgress linear both;
+    animation-timeline: scroll(root);
+  }
+}
+@keyframes scrollProgress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.back-to-top {
+  position: fixed;
+  right: 16px;
+  bottom: 20px;
+  z-index: 30;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: #111111;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  transform: translateY(12px) scale(0.9);
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease;
+}
+.back-to-top-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.back-to-top:hover {
+  background: #E63A2E;
+}
+@media (prefers-reduced-motion: reduce) {
+  .back-to-top { transition: opacity 0.2s ease; }
+  .scroll-progress-bar { animation: none; transform: scaleX(1); opacity: 0.35; }
+}
+
+/* ============================================
+   BOTTOM NAV — barra inferior mobile (thumb nav)
+   ============================================ */
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30; /* debajo de los overlays de los drawers (z-40/z-50) */
+  display: flex;
+  align-items: stretch;
+  background: #fff;
+  border-top: 1px solid #E0DED8;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 4px 7px;
+  color: #999;
+  font-family: var(--font-dm);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  transition: color 0.2s ease;
+  background: transparent;
+  border: none;
+}
+.bottom-nav-item-active {
+  color: #111;
+}
+.bottom-nav-item-active svg {
+  color: #E63A2E;
+}
+.bottom-nav-cart-icon {
+  position: relative;
+  display: inline-flex;
+}
+.bottom-nav-badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  background: #E63A2E;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  width: 15px;
+  height: 15px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Que el contenido y el botón de volver arriba no queden tapados por la barra */
+@media (max-width: 767px) {
+  body { padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)); }
+  .back-to-top { bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 14px); }
+}
+@media (min-width: 768px) {
+  .bottom-nav { display: none; }
+}
+
+/* ============================================
    HERO OUTLINE — BLACK gigante solo de contorno, flotando sobre la foto
    completa (no la tapa) y con halo oscuro para leerse sobre cualquier zona
    de la imagen, clara u oscura.
