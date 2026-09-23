@@ -8,7 +8,7 @@ import { Product } from "@/types";
 interface ProductCardProps {
   product: Product;
   index?: number;
-  variant?: "grid" | "scroll"; // grid = grilla 2col, scroll = horizontal scroll
+  variant?: "grid" | "scroll" | "bento"; // bento = card grande del home (4/5)
 }
 
 export default function ProductCard({ product, index = 0, variant = "grid" }: ProductCardProps) {
@@ -37,7 +37,7 @@ export default function ProductCard({ product, index = 0, variant = "grid" }: Pr
   }) ?? [];
 
   const wrapperClass = variant === "scroll"
-    ? "flex-shrink-0 w-44 text-left group cursor-pointer tilt-card"
+    ? "flex-shrink-0 w-40 text-left group cursor-pointer tilt-card"
     : "bg-[#F5F4F0] flex flex-col text-left w-full group cursor-pointer hover:bg-[#ECEAE4] transition-colors tilt-card";
 
   return (
@@ -47,7 +47,9 @@ export default function ProductCard({ product, index = 0, variant = "grid" }: Pr
     >
       {/* Imagen — nombrada para morphear con la imagen de la página de detalle */}
       <div className={`relative w-full bg-[#ECEAE4] overflow-hidden tilt-card-inner ${
-        variant === "scroll" ? "aspect-square rounded-sm" : "aspect-square"
+        variant === "scroll" ? "aspect-square rounded-sm"
+        : variant === "bento" ? "aspect-[4/5]"
+        : "aspect-square"
       }`}>
         <ViewTransition name={`product-image-${product._id ?? product.id}`}>
           <Image
@@ -96,7 +98,11 @@ export default function ProductCard({ product, index = 0, variant = "grid" }: Pr
       </div>
 
       {/* Info */}
-      <div className={`flex flex-col flex-1 ${variant === "grid" ? "p-3" : "mt-2 px-0.5"}`}>
+      <div className={`flex flex-col flex-1 ${
+        variant === "scroll" ? "mt-2 px-0.5"
+        : variant === "bento" ? "p-3"
+        : "p-3"
+      }`}>
 
         {/* Categoría */}
         <span className="font-dm text-[10px] text-[#E63A2E] uppercase tracking-wider font-semibold mb-0.5">
@@ -111,7 +117,7 @@ export default function ProductCard({ product, index = 0, variant = "grid" }: Pr
         </h2>
 
         {/* Talles disponibles */}
-        {product.sizes && product.sizes.length > 0 && variant === "grid" && (
+        {product.sizes && product.sizes.length > 0 && variant !== "scroll" && (
           <div className="flex gap-1 flex-wrap mt-2">
             {product.sizes.map(s => {
               const enStock = hasStockInSize(s);
@@ -141,8 +147,8 @@ export default function ProductCard({ product, index = 0, variant = "grid" }: Pr
             )}
           </div>
 
-          {/* Flecha solo en grid */}
-          {variant === "grid" && (
+          {/* Flecha solo en grid/bento */}
+          {variant !== "scroll" && (
             <div className="w-7 h-7 rounded-full bg-[#111] flex items-center justify-center flex-shrink-0 group-hover:bg-[#E63A2E] transition-colors duration-300">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14M12 5l7 7-7 7"/>
