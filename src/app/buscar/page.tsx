@@ -31,8 +31,17 @@ function SearchResults() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <div className="w-6 h-6 border-2 border-[#111] border-t-transparent rounded-full animate-spin" />
+        <div className="grid grid-cols-2 gap-[1px] bg-[#E0DED8] mt-[1px]">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-[#F5F4F0] animate-pulse">
+              <div className="aspect-square bg-[#ECEAE4]" />
+              <div className="p-3 space-y-2">
+                <div className="h-2 bg-[#E0DED8] rounded w-1/3" />
+                <div className="h-3 bg-[#E0DED8] rounded w-3/4" />
+                <div className="h-3 bg-[#E0DED8] rounded w-1/4 mt-2" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : !q ? (
         <div className="flex flex-col items-center justify-center py-20 px-8 text-center">

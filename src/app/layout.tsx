@@ -6,6 +6,8 @@ import CartDrawer from "@/components/CartDrawer";
 import Header from "@/components/Header";
 import AuthProvider from "@/components/AuthProvider";
 import SplashScreen from "@/components/SplashScreen";
+import ScrollUtils from "@/components/ScrollUtils";
+import BottomNav from "@/components/BottomNav";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 
 const bebas = Bebas_Neue({
@@ -76,6 +78,7 @@ export default function RootLayout({
         <GoogleAnalytics />
         <AuthProvider>
           <SplashScreen />
+          <ScrollUtils />
           <CartProvider>
             <Header />
             <main className="flex-1 w-full">
@@ -96,6 +99,7 @@ export default function RootLayout({
               </div>
             </footer>
             <CartDrawer />
+            <BottomNav />
           </CartProvider>
         </AuthProvider>
       </body>

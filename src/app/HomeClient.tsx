@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Product } from "@/types";
 import ProductCard from "@/components/ProductCard";
 import HeroCarousel from "@/components/HeroCarousel";
-import MagneticButton from "@/components/MagneticButton";
 import { useReveal } from "@/hooks/useReveal";
 
 interface HomeData {
@@ -86,7 +85,6 @@ export default function HomeClient() {
   const router = useRouter();
   const [data, setData] = useState<HomeData | null>(null);
   const [loading, setLoading] = useState(true);
-  const heroRef = useReveal<HTMLDivElement>();
 
   useEffect(() => {
     fetch("/api/home")
@@ -100,33 +98,34 @@ export default function HomeClient() {
   return (
     <div className="w-full pb-20">
 
-      {/* Hero — foto full-bleed, tipografía contenida, un solo CTA.
-          Mobile-first: altura moderada para que se vea la sección de abajo. */}
-      <div ref={heroRef} className="relative w-full h-[68svh] min-h-[440px] max-h-[620px] bg-[#0A0A0A] overflow-hidden reveal">
+      {/* Hero — foto protagonista, un titular, un CTA.
+          El degradé es solo abajo y solo detrás del texto para que el producto
+          se vea. Los textos ignoran el toque (pointer-events-none) para que el
+          swipe del carrusel funcione en toda la imagen; solo el botón lo recibe. */}
+      <section className="relative w-full h-[68svh] min-h-[440px] max-h-[620px] bg-[#0A0A0A] overflow-hidden">
         <HeroCarousel intervalMs={5000} />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/40 z-[1]" />
+        <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/75 via-black/25 to-transparent z-[1] pointer-events-none" />
 
-        <div className="absolute inset-0 z-10 flex flex-col justify-end px-5 pb-10">
-          <p className="hero-eyebrow hero-badge font-dm text-[10px] text-white/60 uppercase tracking-[0.3em] mb-3">
-            <span className="hero-live-dot" />
-            Nueva colección
+        <div className="absolute inset-x-0 bottom-0 z-10 px-5 pb-8 pointer-events-none">
+          <h1 className="hero-enter font-bebas text-5xl leading-[0.95] tracking-tight text-white">
+            NUEVA COLECCIÓN
+          </h1>
+          <p
+            className="hero-enter font-dm text-sm text-white/85 mt-2"
+            style={{ animationDelay: "0.12s" }}
+          >
+            Envíos a todo el país.
           </p>
-
-          <h1 className="hero-outline-text mb-4">BLACK</h1>
-
-          <p className="hero-sub font-dm text-sm text-white/70 max-w-[260px] mb-6">
-            Ropa de calidad para el día a día. Envíos a todo el país.
-          </p>
-
-          <MagneticButton
+          <button
             onClick={() => router.push("/tienda")}
-            className="hero-cta w-fit bg-white text-[#111] font-dm font-bold text-[11px] uppercase tracking-widest px-6 py-3 rounded-sm hover:bg-[#F0EDE6] transition-colors"
+            className="hero-enter pointer-events-auto mt-5 inline-flex items-center gap-2 bg-white text-[#111] font-dm font-bold text-[11px] uppercase tracking-widest px-6 py-3.5 rounded-sm active:bg-[#F0EDE6] transition-colors"
+            style={{ animationDelay: "0.24s" }}
           >
             Ver colección
-            <span className="hero-cta-arrow" aria-hidden="true">→</span>
-          </MagneticButton>
+            <span aria-hidden="true">→</span>
+          </button>
         </div>
-      </div>
+      </section>
 
       {loading ? (
         <div className="px-4 mt-10 space-y-4">
