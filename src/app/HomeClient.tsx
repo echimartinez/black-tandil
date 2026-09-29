@@ -98,20 +98,25 @@ export default function HomeClient() {
   return (
     <div className="w-full pb-20">
 
-      {/* Hero — foto protagonista, un titular, un CTA.
-          El degradé es solo abajo y solo detrás del texto para que el producto
-          se vea. Los textos ignoran el toque (pointer-events-none) para que el
-          swipe del carrusel funcione en toda la imagen; solo el botón lo recibe. */}
+      {/* Hero — foto protagonista, centrado, sin repetir el logo "BLACK".
+          Una franja oscura solo detrás del bloque de texto (no en toda la
+          foto) para que se lea bien sin apagar el producto arriba y abajo. */}
       <section className="relative w-full h-[68svh] min-h-[440px] max-h-[620px] bg-[#0A0A0A] overflow-hidden">
         <HeroCarousel intervalMs={5000} />
-        <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/75 via-black/25 to-transparent z-[1] pointer-events-none" />
+        <div
+          className="absolute inset-x-0 top-[22%] h-[46%] z-[1] pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(to bottom, transparent, rgba(0,0,0,0.6) 30%, rgba(0,0,0,0.6) 70%, transparent)",
+          }}
+        />
 
-        <div className="absolute inset-x-0 bottom-0 z-10 px-5 pb-8 pointer-events-none">
-          <h1 className="hero-enter font-bebas text-5xl leading-[0.95] tracking-tight text-white">
+        <div className="absolute inset-x-0 top-[30%] z-10 px-6 flex flex-col items-center text-center pointer-events-none">
+          <h1 className="hero-enter font-bebas text-6xl leading-[0.95] tracking-tight text-white">
             NUEVA COLECCIÓN
           </h1>
           <p
-            className="hero-enter font-dm text-sm text-white/85 mt-2"
+            className="hero-enter font-dm text-sm text-white/85 mt-3 max-w-[260px]"
             style={{ animationDelay: "0.12s" }}
           >
             Envíos a todo el país.
