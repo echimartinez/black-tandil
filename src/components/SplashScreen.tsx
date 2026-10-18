@@ -2,507 +2,400 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const ACCENT = "#E63A2E";
-const CYAN = "#00FFFF";
-
 type Phase = "playing" | "exiting" | "gone";
 
-// Duraciones totales (ms) — 5s de show, dejando que el nombre BLACK quede sostenido en pantalla.
+// Línea de tiempo (ms). Total: 5s.
+//  0.15s  SOMOS aparece letra por letra
+//  0.94s  BLACK entra desde cámara (escala grande + blur) ...
+//  1.30s  ... IMPACTO: flash, ondas, chispas, shake, aberración cromática
+//  1.90s  @SOMOSBLACK.AR  ·  2.00s línea roja
+//  4.25s  salida (zoom + fade)  ·  5.00s fin
+const IMPACT_AT = 1300;
 const EXIT_AT = 4250;
 const GONE_AT = 5000;
 
-interface Particle {
+const SOMOS = "SOMOS".split("");
+
+const rand = (min: number, max: number) => min + Math.random() * (max - min);
+
+interface Star {
   x: number;
   y: number;
   z: number;
 }
+interface Spark {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  max: number;
+  color: string;
+  width: number;
+}
+
+const SPARK_COLORS = ["#ffffff", "#ffffff", "#ffffff", "#ff4a3a", "#E63A2E", "#ff8a2a"];
 
 export default function SplashScreen() {
   const [phase, setPhase] = useState<Phase>("playing");
   const [reducedMotion, setReducedMotion] = useState(false);
-  // Arranca en false (igual que en el servidor, que no tiene window) y se
-  // corrige en el cliente antes del primer paint — evita el mismatch de
-  // hidratación que daba si leíamos window.innerWidth directo en el render.
-  const [isMobile, setIsMobile] = useState(false);
+  // Estado (no classList): React re-renderiza y pisaría clases agregadas a mano.
+  const [impact, setImpact] = useState(false);
+
+  const phaseRef = useRef<Phase>("playing");
   const tiltRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rafRef = useRef<number | undefined>(undefined);
+  const blackRef = useRef<HTMLDivElement>(null);
 
+  // Fases de tiempo + preferencia de movimiento reducido.
+  // Se lee window solo acá (efecto), nunca en el render → sin mismatch de hidratación.
   useEffect(() => {
-    setIsMobile(window.innerWidth < 768);
-  }, []);
-
-  // Fases de tiempo
-  useEffect(() => {
-    const t1 = setTimeout(() => setPhase("exiting"), reducedMotion ? 500 : EXIT_AT);
-    const t2 = setTimeout(() => setPhase("gone"), reducedMotion ? 800 : GONE_AT);
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setReducedMotion(reduced);
+    const go = (p: Phase) => {
+      phaseRef.current = p;
+      setPhase(p);
+    };
+    const t1 = setTimeout(() => go("exiting"), reduced ? 1400 : EXIT_AT);
+    const t2 = setTimeout(() => go("gone"), reduced ? 1900 : GONE_AT);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
     };
-  }, [reducedMotion]);
-
-  // Preferencia de movimiento reducido
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(mq.matches);
   }, []);
 
-  // Bloquea el scroll mientras se ve el splash. El componente queda montado
-  // para siempre en el layout (solo deja de pintar nada cuando phase==="gone"),
-  // así que liberamos el scroll a mano según la fase en vez de esperar un
-  // "unmount" que nunca va a pasar.
+  // El componente queda montado en el layout: liberamos el scroll según la fase.
   useEffect(() => {
-    if (typeof document === "undefined") return;
     document.body.style.overflow = phase === "gone" ? "" : "hidden";
     return () => {
       document.body.style.overflow = "";
     };
   }, [phase]);
 
-  // Tilt 3D con el mouse (desktop) — se aplica a la escena completa
+  // Tilt sutil con el mouse (solo desktop con puntero fino). Sin estado: se escribe directo al style.
   useEffect(() => {
-    if (reducedMotion) return;
-    const handleMove = (e: MouseEvent) => {
-      if (!tiltRef.current) return;
-      const x = e.clientX / window.innerWidth - 0.5;
-      const y = e.clientY / window.innerHeight - 0.5;
-      tiltRef.current.style.setProperty("--tilt-x", `${x * 10}deg`);
-      tiltRef.current.style.setProperty("--tilt-y", `${y * -10}deg`);
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let raf = 0;
+    const onMove = (e: PointerEvent) => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const el = tiltRef.current;
+        if (!el) return;
+        const nx = e.clientX / window.innerWidth - 0.5;
+        const ny = e.clientY / window.innerHeight - 0.5;
+        el.style.transform = `perspective(900px) rotateY(${nx * 7}deg) rotateX(${-ny * 7}deg)`;
+      });
     };
-    const handleLeave = () => {
-      tiltRef.current?.style.setProperty("--tilt-x", "0deg");
-      tiltRef.current?.style.setProperty("--tilt-y", "0deg");
-    };
-    window.addEventListener("mousemove", handleMove);
-    window.addEventListener("mouseleave", handleLeave);
+    window.addEventListener("pointermove", onMove, { passive: true });
     return () => {
-      window.removeEventListener("mousemove", handleMove);
-      window.removeEventListener("mouseleave", handleLeave);
+      cancelAnimationFrame(raf);
+      window.removeEventListener("pointermove", onMove);
     };
-  }, [reducedMotion]);
+  }, []);
 
-  // Túnel de partículas en canvas — "warp speed" hacia la cámara.
-  // Liviano a propósito: sin librerías 3D, canvas2D con proyección de perspectiva manual.
+  // Canvas: estrellas blancas viajando + ráfaga de chispas en el impacto.
   useEffect(() => {
-    if (reducedMotion) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const mobileCanvas = window.innerWidth < 768;
-    const COUNT = mobileCanvas ? 40 : 90;
-    const DPR = Math.min(window.devicePixelRatio || 1, 2);
-    const FOCAL = 300;
-
-    let width = window.innerWidth;
-    let height = window.innerHeight;
+    const mobile = window.innerWidth < 768;
+    const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.5 : 2);
+    let w = 0;
+    let h = 0;
     const resize = () => {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width * DPR;
-      canvas.height = height * DPR;
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      w = window.innerWidth;
+      h = window.innerHeight;
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     resize();
     window.addEventListener("resize", resize);
 
-    const particles: Particle[] = Array.from({ length: COUNT }, () => ({
-      x: (Math.random() - 0.5) * width,
-      y: (Math.random() - 0.5) * height,
-      z: Math.random() * FOCAL,
+    const stars: Star[] = Array.from({ length: mobile ? 36 : 80 }, () => ({
+      x: rand(-1, 1),
+      y: rand(-1, 1),
+      z: rand(0.1, 1),
     }));
+    const sparks: Spark[] = [];
 
-    let hidden = false;
-    const onVisibility = () => {
-      hidden = document.hidden;
+    const spawnSparks = () => {
+      const rect = blackRef.current?.getBoundingClientRect();
+      const cx = rect ? rect.left + rect.width / 2 : w / 2;
+      const cy = rect ? rect.top + rect.height / 2 : h / 2;
+      const rw = rect ? rect.width : w * 0.6;
+      const rh = rect ? rect.height : h * 0.2;
+      const count = mobile ? 80 : 170;
+      const speedScale = mobile ? 0.7 : 1;
+      for (let i = 0; i < count; i++) {
+        // Nace dentro del rectángulo de BLACK y sale disparada hacia afuera desde el centro.
+        const px = cx + rand(-0.5, 0.5) * rw;
+        const py = cy + rand(-0.5, 0.5) * rh;
+        const ang = Math.atan2(py - cy, px - cx) + rand(-0.5, 0.5);
+        const speed = rand(140, 1400) * speedScale;
+        const max = rand(0.55, 1.35);
+        sparks.push({
+          x: px,
+          y: py,
+          vx: Math.cos(ang) * speed,
+          vy: Math.sin(ang) * speed,
+          life: max,
+          max,
+          color: SPARK_COLORS[(Math.random() * SPARK_COLORS.length) | 0],
+          width: rand(1, 2.6),
+        });
+      }
     };
-    document.addEventListener("visibilitychange", onVisibility);
 
-    let speed = 2.2;
-    let elapsed = 0;
-    let last = performance.now();
+    const start = performance.now();
+    let last = start;
+    let impacted = false;
+    let impactAt = 0;
+    let raf = 0;
 
-    const draw = (now: number) => {
-      rafRef.current = requestAnimationFrame(draw);
-      if (hidden) {
-        last = now;
-        return;
-      }
-      const dt = Math.min(now - last, 48);
+    const frame = (now: number) => {
+      if (phaseRef.current === "gone") return;
+      const dt = Math.min((now - last) / 1000, 0.05);
       last = now;
-      elapsed += dt;
-      // acelera al principio, se calma cuando aparece el logo, acelera de nuevo en la salida
-      const t = elapsed / 1000;
-      if (phase === "exiting") {
-        speed = Math.min(speed + dt * 0.03, 14);
-      } else {
-        speed = 2.2 + Math.min(t, 1) * 1.3;
+      const elapsed = now - start;
+
+      if (!impacted && elapsed >= IMPACT_AT) {
+        impacted = true;
+        impactAt = elapsed;
+        spawnSparks();
+        setImpact(true);
       }
 
-      ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = "#050505";
-      ctx.fillRect(0, 0, width, height);
+      // Velocidad del "viaje": base + empujón al impactar (decae) + aceleración en la salida.
+      let speed = 0.22;
+      if (impacted) speed += 2.6 * Math.exp(-(elapsed - impactAt) / 380);
+      if (phaseRef.current === "exiting") speed += 2.2;
 
-      const cx = width / 2;
-      const cy = height / 2;
+      ctx.globalCompositeOperation = "source-over";
+      ctx.clearRect(0, 0, w, h);
 
-      for (const p of particles) {
-        p.z -= speed;
-        if (p.z <= 1) {
-          p.x = (Math.random() - 0.5) * width;
-          p.y = (Math.random() - 0.5) * height;
-          p.z = FOCAL;
+      // Estrellas: proyección de perspectiva manual con estela.
+      const f = Math.max(w, h) * 0.5;
+      const cx = w / 2;
+      const cy = h / 2;
+      ctx.lineCap = "round";
+      for (const s of stars) {
+        const prevZ = s.z + speed * dt * 2.4 + 0.004;
+        s.z -= speed * dt;
+        const sx = cx + (s.x / s.z) * f;
+        const sy = cy + (s.y / s.z) * f;
+        if (s.z <= 0.03 || sx < -20 || sx > w + 20 || sy < -20 || sy > h + 20) {
+          s.x = rand(-1, 1);
+          s.y = rand(-1, 1);
+          s.z = 1;
+          continue;
         }
-        const scale = FOCAL / p.z;
-        const sx = cx + p.x * scale;
-        const sy = cy + p.y * scale;
-        if (sx < 0 || sx > width || sy < 0 || sy > height) continue;
-
-        const prevScale = FOCAL / (p.z + speed * 1.6);
-        const psx = cx + p.x * prevScale;
-        const psy = cy + p.y * prevScale;
-
-        const alpha = Math.min(1, (FOCAL - p.z) / FOCAL + 0.25);
-        const r = Math.max(0.5, scale * 1.3);
-
-        // estela blanca (la estrella "viajando")
-        ctx.strokeStyle = `rgba(255,255,255,${alpha * 0.85})`;
-        ctx.lineWidth = r;
+        const px = cx + (s.x / prevZ) * f;
+        const py = cy + (s.y / prevZ) * f;
+        const near = 1 - s.z;
+        ctx.strokeStyle = `rgba(255,255,255,${Math.min(1, near * 1.4 + 0.2).toFixed(3)})`;
+        ctx.lineWidth = near * 2 + 0.5;
         ctx.beginPath();
-        ctx.moveTo(psx, psy);
+        ctx.moveTo(px, py);
         ctx.lineTo(sx, sy);
         ctx.stroke();
-
-        // punto brillante en la cabeza, más marcado cuanto más cerca de cámara
-        ctx.beginPath();
-        ctx.fillStyle = `rgba(255,255,255,${Math.min(1, alpha * 1.1)})`;
-        ctx.arc(sx, sy, r * 0.9, 0, Math.PI * 2);
-        ctx.fill();
       }
-    };
 
-    rafRef.current = requestAnimationFrame(draw);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      window.removeEventListener("resize", resize);
-      document.removeEventListener("visibilitychange", onVisibility);
+      // Chispas (aditivas para que "brillen").
+      if (sparks.length) {
+        ctx.globalCompositeOperation = "lighter";
+        const drag = Math.exp(-2.2 * dt);
+        for (let i = sparks.length - 1; i >= 0; i--) {
+          const p = sparks[i];
+          p.life -= dt;
+          if (p.life <= 0) {
+            sparks.splice(i, 1);
+            continue;
+          }
+          p.vx *= drag;
+          p.vy *= drag;
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          ctx.globalAlpha = Math.max(0, p.life / p.max);
+          ctx.strokeStyle = p.color;
+          ctx.lineWidth = p.width;
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p.x - p.vx * 0.035, p.y - p.vy * 0.035);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      raf = requestAnimationFrame(frame);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reducedMotion, phase]);
+    raf = requestAnimationFrame(frame);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", resize);
+    };
+  }, []);
 
   if (phase === "gone") return null;
 
-  const ringCount = isMobile ? 5 : 8;
-  const rings = Array.from({ length: ringCount });
+  const cls = [
+    "sp-root",
+    impact ? "sp-impact" : "",
+    phase === "exiting" ? "sp-exiting" : "",
+    reducedMotion ? "sp-reduced" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <div
-      className={`splash-root ${phase === "exiting" ? "is-exiting" : ""} ${reducedMotion ? "is-reduced" : ""}`}
-    >
-      {!reducedMotion && <canvas ref={canvasRef} className="splash-canvas" />}
-      <div className="splash-noise" />
+    <div className={cls} aria-hidden="true">
+      <canvas ref={canvasRef} className="sp-canvas" />
+      <div className="sp-flash" />
 
-      {!reducedMotion && (
-        <div className="splash-scene" style={{ perspective: isMobile ? "700px" : "1100px" }}>
-          <div className="splash-tunnel">
-            {rings.map((_, i) => (
-              <div
-                key={i}
-                className="tunnel-ring"
-                style={{
-                  transform: `translateZ(${-i * (isMobile ? 160 : 210)}px) rotateZ(${i * 7}deg)`,
-                  opacity: 1 - i / (ringCount + 2),
-                }}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+      <div ref={tiltRef} className="sp-tilt">
+        <div className="sp-out">
+          <div className="sp-shake">
+            <div className="sp-somos">
+              {SOMOS.map((ch, i) => (
+                <span key={i} style={{ animationDelay: `${0.15 + i * 0.09}s` }}>
+                  {ch}
+                </span>
+              ))}
+            </div>
 
-      <div
-        ref={tiltRef}
-        className="splash-tilt"
-        style={
-          {
-            "--tilt-x": "0deg",
-            "--tilt-y": "0deg",
-          } as React.CSSProperties
-        }
-      >
-        <div className="splash-logo-wrap">
-          <div className="splash-glow" />
-          <div className="splash-logo" data-text="BLACK">
-            {["B", "L", "A", "C", "K"].map((letter, i) => (
-              <span key={i} data-text={letter} style={{ animationDelay: `${0.55 + i * 0.06}s` }}>
-                {/* capas apiladas en Z real para dar volumen; se pintan de atrás hacia adelante
-                    (orden de DOM) para que la capa blanca quede siempre arriba, sin depender
-                    de que el navegador ordene por profundidad 3D */}
-                {Array.from({ length: 6 }).map((_, i) => {
-                  const layer = 5 - i;
-                  return (
-                    <em
-                      key={layer}
-                      style={{
-                        transform: `translateZ(${-layer * 3}px)`,
-                        color: layer === 0 ? "#fff" : `rgba(10,10,10,${0.35 + layer * 0.1})`,
-                      }}
-                    >
-                      {letter}
-                    </em>
-                  );
-                })}
+            <div ref={blackRef} className="sp-black">
+              <span className="sp-ring sp-ring-a" />
+              <span className="sp-ring sp-ring-b" />
+              <span className="sp-word" data-text="BLACK">
+                BLACK
               </span>
-            ))}
+            </div>
+
+            <div className="sp-sub">@SOMOSBLACK.AR</div>
+            <div className="sp-line" />
           </div>
-          <p className="splash-subtitle">@SOMOSBLACK.AR</p>
-          <div className="splash-line" />
         </div>
       </div>
 
-      <div className="splash-flash" />
-
       <style>{`
-        .splash-root {
-          position: fixed;
-          inset: 0;
-          z-index: 9999;
-          background-color: #050505;
-          overflow: hidden;
-          transition: opacity 0.45s ease;
+        .sp-root{
+          position:fixed;inset:0;z-index:9999;background:#000;overflow:hidden;
+          display:flex;align-items:center;justify-content:center;
+          opacity:1;transition:opacity .75s ease-in;
         }
-        .splash-root.is-exiting {
-          opacity: 0;
-          pointer-events: none;
+        .sp-root.sp-exiting{opacity:0;pointer-events:none}
+        .sp-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+        .sp-flash{
+          position:absolute;inset:0;pointer-events:none;opacity:0;
+          background:radial-gradient(circle at 50% 54%,rgba(255,255,255,.95) 0%,rgba(230,58,46,.55) 28%,rgba(0,0,0,0) 65%);
         }
-        .splash-root.is-reduced {
-          display: flex;
-          align-items: center;
-          justify-content: center;
+        .sp-impact .sp-flash{animation:spFlash .55s ease-out both}
+
+        .sp-tilt{position:relative;will-change:transform;transition:transform .15s ease-out}
+        .sp-out{will-change:transform,opacity}
+        .sp-exiting .sp-out{animation:spOut .75s cubic-bezier(.6,0,.9,.5) forwards}
+        .sp-shake{
+          display:flex;flex-direction:column;align-items:center;
+          padding:0 16px;text-align:center;
+        }
+        .sp-impact .sp-shake{animation:spShake .5s linear both}
+
+        /* SOMOS */
+        .sp-somos{
+          display:flex;font-family:var(--font-bebas),"Bebas Neue",sans-serif;
+          font-size:clamp(30px,9.5vw,64px);line-height:1;color:#fff;
+          letter-spacing:.42em;padding-left:.42em;margin-bottom:.08em;
+          text-shadow:0 0 18px rgba(255,255,255,.35);
+        }
+        .sp-somos span{display:inline-block;animation:spSomosIn .7s cubic-bezier(.2,.8,.2,1) both}
+
+        /* BLACK */
+        .sp-black{
+          position:relative;display:inline-block;color:#fff;
+          font-family:var(--font-bebas),"Bebas Neue",sans-serif;
+          font-size:clamp(88px,33vw,250px);line-height:.85;letter-spacing:.01em;
+          transform-origin:50% 55%;
+          animation:spSlam .58s .94s both, spGlow 1.6s 1.3s ease-out forwards;
+          will-change:transform,filter,opacity;
+        }
+        .sp-word{position:relative;display:block;white-space:nowrap}
+        .sp-word::before,.sp-word::after{
+          content:attr(data-text);position:absolute;inset:0;opacity:0;
+          text-shadow:none;mix-blend-mode:screen;pointer-events:none;
+        }
+        .sp-word::before{color:#ff2a1a}
+        .sp-word::after{color:#00e5ff}
+        .sp-impact .sp-word::before{animation:spAbL .5s ease-out both}
+        .sp-impact .sp-word::after{animation:spAbR .5s ease-out both}
+
+        .sp-ring{
+          position:absolute;left:50%;top:50%;width:26vmin;height:26vmin;
+          margin:-13vmin 0 0 -13vmin;border-radius:50%;opacity:0;pointer-events:none;
+          border:3px solid rgba(255,255,255,.9);
+        }
+        .sp-ring-b{border-color:rgba(230,58,46,.9);border-width:2px}
+        .sp-impact .sp-ring-a{animation:spRing .9s cubic-bezier(.1,.6,.3,1) both}
+        .sp-impact .sp-ring-b{animation:spRing 1.1s .08s cubic-bezier(.1,.6,.3,1) both}
+
+        .sp-sub{
+          margin-top:18px;font-family:var(--font-dm),system-ui,sans-serif;font-weight:600;
+          font-size:12px;letter-spacing:.5em;padding-left:.5em;color:rgba(255,255,255,.75);
+          animation:spFade .7s 1.9s both;
+        }
+        .sp-line{
+          margin-top:14px;height:2px;width:64px;background:#E63A2E;transform-origin:50% 50%;
+          animation:spLine .6s 2s cubic-bezier(.2,.8,.2,1) both;
         }
 
-        .splash-canvas {
-          position: absolute;
-          inset: 0;
-          z-index: 1;
+        @keyframes spSomosIn{
+          from{opacity:0;filter:blur(12px);transform:translateY(14px) scale(1.18)}
+          to{opacity:1;filter:blur(0);transform:none}
+        }
+        @keyframes spSlam{
+          0%{opacity:0;transform:scale(3.4);filter:blur(14px);animation-timing-function:cubic-bezier(.55,0,1,.45)}
+          10%{opacity:1;animation-timing-function:cubic-bezier(.55,0,1,.45)}
+          62%{opacity:1;transform:scale(1);filter:blur(0);animation-timing-function:ease-out}
+          75%{transform:scale(.94);animation-timing-function:ease-in-out}
+          88%{transform:scale(1.02);animation-timing-function:ease-out}
+          100%{opacity:1;transform:scale(1);filter:none}
+        }
+        @keyframes spGlow{
+          0%{text-shadow:0 0 6px #fff,0 0 30px #ff3a2a,0 0 80px #E63A2E}
+          100%{text-shadow:0 0 0 rgba(230,58,46,0),0 0 24px rgba(230,58,46,.35),0 0 60px rgba(230,58,46,.2)}
+        }
+        @keyframes spFlash{0%{opacity:1}100%{opacity:0}}
+        @keyframes spShake{
+          0%{transform:translate(0,0)}
+          12%{transform:translate(-9px,5px)}
+          26%{transform:translate(8px,-6px)}
+          40%{transform:translate(-6px,-3px)}
+          55%{transform:translate(5px,4px)}
+          72%{transform:translate(-2px,2px)}
+          100%{transform:translate(0,0)}
+        }
+        @keyframes spAbL{0%{opacity:.9;transform:translateX(-10px)}100%{opacity:0;transform:translateX(0)}}
+        @keyframes spAbR{0%{opacity:.9;transform:translateX(10px)}100%{opacity:0;transform:translateX(0)}}
+        @keyframes spRing{
+          0%{opacity:1;transform:scale(.2)}
+          100%{opacity:0;transform:scale(14)}
+        }
+        @keyframes spFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+        @keyframes spLine{from{opacity:0;transform:scaleX(0)}to{opacity:1;transform:scaleX(1)}}
+        @keyframes spOut{
+          0%{opacity:1;transform:scale(1);filter:blur(0)}
+          100%{opacity:0;transform:scale(1.8);filter:blur(10px)}
         }
 
-        .splash-noise {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          opacity: 0.05;
-          z-index: 2;
-          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-        }
-
-        .splash-scene {
-          position: absolute;
-          inset: 0;
-          z-index: 3;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transform-style: preserve-3d;
-        }
-        .splash-tunnel {
-          position: relative;
-          width: 60vmin;
-          height: 60vmin;
-          transform-style: preserve-3d;
-          animation: tunnelSpin 14s linear infinite;
-        }
-        @keyframes tunnelSpin {
-          from { transform: rotateZ(0deg); }
-          to { transform: rotateZ(360deg); }
-        }
-        .tunnel-ring {
-          position: absolute;
-          inset: 0;
-          border: 1px solid rgba(230, 58, 46, 0.22);
-          border-radius: 6px;
-        }
-
-        .splash-tilt {
-          position: relative;
-          z-index: 4;
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transform: perspective(1000px) rotateY(var(--tilt-x)) rotateX(var(--tilt-y));
-          transition: transform 0.15s ease-out;
-        }
-
-        .splash-logo-wrap {
-          display: block;
-          text-align: center;
-          transform-style: preserve-3d;
-        }
-
-        .splash-glow {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          width: 70vmin;
-          height: 70vmin;
-          transform: translate(-50%, -50%) translateZ(-40px);
-          background: radial-gradient(circle, rgba(230,58,46,0.45) 0%, rgba(230,58,46,0.12) 40%, transparent 70%);
-          filter: blur(4px);
-          opacity: 0;
-          animation: glowIn 1s 0.5s ease-out forwards, glowBreathe 2.6s 1.6s ease-in-out infinite;
-          pointer-events: none;
-        }
-        @keyframes glowIn {
-          from { opacity: 0; transform: translate(-50%, -50%) translateZ(-40px) scale(0.6); }
-          to { opacity: 1; transform: translate(-50%, -50%) translateZ(-40px) scale(1); }
-        }
-        @keyframes glowBreathe {
-          0%, 100% { opacity: 0.75; transform: translate(-50%, -50%) translateZ(-40px) scale(1); }
-          50% { opacity: 1; transform: translate(-50%, -50%) translateZ(-40px) scale(1.12); }
-        }
-
-        .splash-logo {
-          position: relative;
-          display: block;
-          white-space: nowrap;
-          font-family: var(--font-bebas);
-          font-size: clamp(68px, 22vw, 160px);
-          letter-spacing: 0.09em;
-          line-height: 1;
-          margin-bottom: 14px;
-          transform-style: preserve-3d;
-        }
-
-        .splash-logo span {
-          position: relative;
-          display: inline-block;
-          margin-right: 0.06em;
-          opacity: 0;
-          transform-style: preserve-3d;
-          animation: letterFlyIn 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards,
-            letterGlitch 0.35s ease-in-out 3;
-          animation-delay: inherit;
-        }
-        .splash-logo span:last-child {
-          margin-right: 0;
-        }
-
-        @keyframes letterFlyIn {
-          from {
-            opacity: 0;
-            transform: translateZ(-320px) rotateY(100deg) scale(0.6);
-            filter: blur(6px);
-          }
-          70% {
-            filter: blur(0);
-          }
-          100% {
-            opacity: 1;
-            transform: translateZ(0) rotateY(0deg) scale(1);
-            filter: blur(0);
-          }
-        }
-
-        @keyframes letterGlitch {
-          0%, 100% { transform: translate(0); }
-          25% { transform: translate(-2px, 1px); }
-          50% { transform: translate(2px, -1px); }
-          75% { transform: translate(-1px, -1px); }
-        }
-
-        .splash-logo span em {
-          position: absolute;
-          inset: 0;
-          font-style: normal;
-          display: block;
-        }
-        .splash-logo span em:first-child {
-          position: static;
-        }
-        .splash-logo span em:last-child {
-          text-shadow: 0 0 16px rgba(230, 58, 46, 0.65), 0 0 38px rgba(230, 58, 46, 0.3);
-          animation: emGlowPulse 2.4s 1.7s ease-in-out infinite;
-        }
-        @keyframes emGlowPulse {
-          0%, 100% { text-shadow: 0 0 16px rgba(230, 58, 46, 0.65), 0 0 38px rgba(230, 58, 46, 0.3); }
-          50% { text-shadow: 0 0 26px rgba(230, 58, 46, 0.9), 0 0 55px rgba(230, 58, 46, 0.45); }
-        }
-
-        .splash-subtitle {
-          font-family: var(--font-dm);
-          font-size: 11px;
-          letter-spacing: 0.3em;
-          color: #888;
-          text-transform: uppercase;
-          margin: 0;
-          opacity: 0;
-          transform: translateZ(20px);
-          animation: subtitleIn 0.7s 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        @keyframes subtitleIn {
-          from { opacity: 0; transform: translateY(10px) translateZ(0); letter-spacing: 0.6em; }
-          to { opacity: 1; transform: translateY(0) translateZ(20px); letter-spacing: 0.3em; }
-        }
-
-        .splash-line {
-          position: relative;
-          margin: 18px auto 0;
-          height: 3px;
-          width: 0;
-          background: linear-gradient(90deg, transparent, ${ACCENT}, #fff, ${ACCENT}, transparent);
-          box-shadow: 0 0 20px rgba(230, 58, 46, 0.8);
-          animation: lineGrow 1.4s 1.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        @keyframes lineGrow {
-          0% { width: 0%; opacity: 1; }
-          85% { width: 220px; opacity: 1; }
-          100% { width: 220px; opacity: 0.6; }
-        }
-
-        .splash-flash {
-          position: absolute;
-          inset: 0;
-          z-index: 5;
-          pointer-events: none;
-          background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(230,58,46,0.4) 35%, transparent 70%);
-          opacity: 0;
-        }
-        .splash-root.is-exiting .splash-flash {
-          animation: flashPulse 0.5s ease-out forwards;
-        }
-        @keyframes flashPulse {
-          0% { opacity: 0; transform: scale(0.4); }
-          40% { opacity: 0.85; transform: scale(1.4); }
-          100% { opacity: 0; transform: scale(2.4); }
-        }
-
-        .splash-root.is-exiting .splash-tunnel {
-          animation: tunnelSpin 14s linear infinite, tunnelPush 0.6s ease-in forwards;
-        }
-        @keyframes tunnelPush {
-          to { transform: translateZ(900px) scale(2.2); }
-        }
-        .splash-root.is-exiting .splash-logo-wrap {
-          animation: logoPush 0.5s ease-in forwards;
-        }
-        @keyframes logoPush {
-          to { transform: translateZ(500px) scale(1.6); opacity: 0; }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .splash-logo span,
-          .splash-subtitle,
-          .splash-line {
-            animation: none !important;
-            opacity: 1 !important;
-            transform: none !important;
-            width: 220px !important;
-          }
-        }
+        /* Movimiento reducido: composición final estática, sin animaciones. */
+        .sp-reduced *,.sp-reduced *::before,.sp-reduced *::after{animation:none!important;transition:none!important}
+        .sp-reduced .sp-ring,.sp-reduced .sp-flash{display:none}
+        .sp-reduced.sp-exiting{opacity:0;transition:opacity .4s linear!important}
       `}</style>
     </div>
   );

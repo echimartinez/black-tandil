@@ -64,8 +64,11 @@ export default function Header() {
             BLACK
           </Link>
 
-          {/* Derecha: carrito + perfil */}
-          <div className="flex items-center gap-4 text-[#111]">
+          {/* Derecha — mobile: vacío a propósito, carrito y perfil viven en la
+              tab nav de abajo. Desktop (≥768px): esa barra inferior se oculta,
+              así que acá vuelven carrito y perfil para que no queden sin acceso. */}
+          <div className="w-[22px] md:hidden" aria-hidden="true" />
+          <div className="hidden md:flex items-center gap-4 text-[#111]">
             <CartIconButton />
             <Link href="/perfil" aria-label="Mi cuenta" className="hover:text-[#555] transition-colors">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">

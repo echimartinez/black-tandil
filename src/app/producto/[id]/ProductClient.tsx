@@ -3,12 +3,23 @@
 import { useState, useRef } from "react";
 import { ViewTransition } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { Product } from "@/types";
 
+// Mismo criterio que usa el admin de categorías para armar los slugs
+// (minúsculas, sin tildes, guiones), así los links del breadcrumb coinciden
+// con las rutas /categoria/... que ya existen.
+function slugify(text: string) {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+}
+
 export default function ProductClient({ product }: { product: Product }) {
-  const router = useRouter();
   const { addItem, openCart } = useCart();
 
   const [selectedImage, setSelectedImage] = useState(0);
@@ -56,16 +67,43 @@ export default function ProductClient({ product }: { product: Product }) {
     setOpenSection(prev => prev === section ? null : section);
   };
 
+  // Breadcrumb: Inicio › Categoría › Subcategoría › Producto.
+  // `category` se guarda como "Categoría / Subcategoría" (o solo "Categoría"
+  // en productos viejos); si viene vacía, el recorrido queda Inicio › Producto.
+  const [catMain, catSub] = (product.category ?? "")
+    .split("/")
+    .map(s => s.trim())
+    .filter(Boolean);
+  const mainSlug = catMain ? slugify(catMain) : "";
+  const crumbs: { label: string; href: string }[] = [{ label: "Inicio", href: "/" }];
+  if (catMain && mainSlug) {
+    crumbs.push({ label: catMain, href: `/categoria/${mainSlug}` });
+    if (catSub && slugify(catSub)) {
+      crumbs.push({ label: catSub, href: `/categoria/${mainSlug}/${slugify(catSub)}` });
+    }
+  }
+
   return (
     <div className="w-full pb-28">
 
-      <button onClick={() => router.back()}
-        className="flex items-center gap-1.5 px-4 py-3 text-xs font-dm text-[#888] hover:text-[#111] transition-colors">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
-        Volver
-      </button>
+      <nav
+        aria-label="Breadcrumb"
+        className="px-4 py-3 border-b border-[#E0DED8] bg-white font-dm text-xs text-[#888]"
+      >
+        <ol className="flex items-center gap-1 min-w-0">
+          {crumbs.map(c => (
+            <li key={c.href} className="flex items-center gap-1 shrink-0">
+              <Link href={c.href} className="hover:text-[#111] transition-colors">
+                {c.label}
+              </Link>
+              <span aria-hidden="true">›</span>
+            </li>
+          ))}
+          <li className="min-w-0 truncate text-[#111] font-medium" aria-current="page">
+            {product.name}
+          </li>
+        </ol>
+      </nav>
 
       {/* Galería con swipe */}
       <div
